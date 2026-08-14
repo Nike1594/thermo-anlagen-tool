@@ -74,7 +74,6 @@ class KaelteKreisprozess:
     def berechne_zweistufig(self, has_mdf=True, mdf_mode="partiell", has_zk=False, T_2zk_C=None):
         fluid = self.fluid
 
-        # --- HD-Seite (Kondensator & 1. Drossel) ---
         T5 = self.T_c - self.dT_sc
         if self.dT_sc == 0:
             h5 = CP.PropsSI('H', 'P', self.p_c, 'Q', 0, fluid)
@@ -103,7 +102,6 @@ class KaelteKreisprozess:
         else:
             h9_eingang = h6
 
-        # --- ND-Seite (Verdampfer & ND-Verdichter) ---
         T9 = self.T_0
         s9 = CP.PropsSI('S', 'P', self.p_0, 'H', h9_eingang, fluid)
         x9 = CP.PropsSI('Q', 'P', self.p_0, 'H', h9_eingang, fluid)
@@ -125,7 +123,7 @@ class KaelteKreisprozess:
         self.zustand['2'] = {'p': self.p_m, 'T': T2, 'h': h2, 's': s2}
         self.zustand['2s'] = {'p': self.p_m, 'T': CP.PropsSI('T', 'P', self.p_m, 'H', h2s, fluid), 'h': h2s, 's': s1}
 
-        # --- ZWISCHENKÜHLUNG (ZK) ---
+
         if has_zk:
             T_sat_m = CP.PropsSI('T', 'P', self.p_m, 'Q', 1, fluid)
             if T_2zk_C is not None:
@@ -148,7 +146,6 @@ class KaelteKreisprozess:
         else:
             h_vor_mischung = h2
 
-        # --- Massenstrombilanzen berechnen ---
         self.m_hd = 1.0  
 
         if has_mdf:
@@ -162,7 +159,6 @@ class KaelteKreisprozess:
             self.m_nd = self.m_hd
             self.m_bypass = 0.0
 
-        # --- Mischpunkt (Vor HD-Verdichter) ---
         if has_mdf:
             if mdf_mode == "partiell":
                 h3 = (self.m_nd * h_vor_mischung + self.m_bypass * self.zustand['7']['h']) / self.m_hd
@@ -175,7 +171,6 @@ class KaelteKreisprozess:
         s3 = CP.PropsSI('S', 'P', self.p_m, 'H', h3, fluid)
         self.zustand['3'] = {'p': self.p_m, 'T': T3, 'h': h3, 's': s3}
 
-        # --- HD-Verdichter ---
         h4s = CP.PropsSI('H', 'P', self.p_c, 'S', s3, fluid)
         h4 = h3 + (h4s - h3) / self.eta_is_hd
         T4 = CP.PropsSI('T', 'P', self.p_c, 'H', h4, fluid)
@@ -183,7 +178,6 @@ class KaelteKreisprozess:
         self.zustand['4'] = {'p': self.p_c, 'T': T4, 'h': h4, 's': s4}
         self.zustand['4s'] = {'p': self.p_c, 'T': CP.PropsSI('T', 'P', self.p_c, 'H', h4s, fluid), 'h': h4s, 's': s3}
 
-        # --- Leistungskennzahlen ---
         self.q_0 = self.m_nd * (h1 - h9_eingang) / 1000 
         self.w_nd = self.m_nd * (h2 - h1) / 1000
         self.w_hd = self.m_hd * (h4 - h3) / 1000
@@ -193,7 +187,6 @@ class KaelteKreisprozess:
         if has_zk:
             self.q_zk = self.m_nd * (h2 - h_vor_mischung) / 1000
             
-        # Zuweisung der Massenströme für die einzelnen Zustandspunkte
         for k in self.zustand:
             if k in ['3', '4', '4s', '5', '6']:
                 self.zustand[k]['mu'] = self.m_hd
@@ -201,8 +194,8 @@ class KaelteKreisprozess:
                 if mdf_mode == "partiell":
                     self.zustand[k]['mu'] = self.m_bypass
                 else:
-                    self.zustand[k]['mu'] = self.m_hd  # Beim Quenchen geht alles durch Punkt 7
-            else: # 8, 9, 1, 2, 2s, 2zk
+                    self.zustand[k]['mu'] = self.m_hd  
+            else: 
                 self.zustand[k]['mu'] = self.m_nd
 
     def get_saettigungslinie(self):
