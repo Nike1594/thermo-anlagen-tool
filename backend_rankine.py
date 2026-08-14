@@ -20,7 +20,6 @@ class ClausiusRankineProzess:
         self.zustand = {}
 
     def berechne_zustaende(self):
-        # 1: Frischdampf
         h1 = CP.PropsSI('H', 'P', self.p_kessel, 'T', self.T_max, self.fluid)
         s1 = CP.PropsSI('S', 'P', self.p_kessel, 'T', self.T_max, self.fluid)
         self.zustand['1'] = {'p': self.p_kessel, 'T': self.T_max, 'h': h1, 's': s1}
