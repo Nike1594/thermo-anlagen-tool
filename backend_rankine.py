@@ -4,7 +4,7 @@ import numpy as np
 class ClausiusRankineProzess:
     def __init__(self, p_kond, p_kessel, T_max, m_dot=1.0, eta_s_P=1.0, eta_s_T=1.0, ignore_pump=False, has_zue=False, p_zue=None, T_zue=None):
         self.fluid = 'Water'
-        CP.set_reference_state(self.fluid, 'DEF')  # GEÄNDERT von 'IIR' zu 'DEF'
+        CP.set_reference_state(self.fluid, 'DEF')
         self.p_kond = p_kond * 100000
         self.p_kessel = p_kessel * 100000
         self.T_max = T_max + 273.15
@@ -26,7 +26,6 @@ class ClausiusRankineProzess:
         self.zustand['1'] = {'p': self.p_kessel, 'T': self.T_max, 'h': h1, 's': s1}
         
         if not self.has_zue:
-            # Ohne ZÜ: Direkte Entspannung in den Kondensator
             h2s = CP.PropsSI('H', 'P', self.p_kond, 'S', s1, self.fluid)
             h2 = h1 - self.eta_s_T * (h1 - h2s)
             T2s = CP.PropsSI('T', 'P', self.p_kond, 'H', h2s, self.fluid)
@@ -34,14 +33,12 @@ class ClausiusRankineProzess:
             s2 = CP.PropsSI('S', 'P', self.p_kond, 'H', h2, self.fluid)
             self.zustand['2s'] = {'p': self.p_kond, 'T': T2s, 'h': h2s, 's': s1}
             self.zustand['2'] = {'p': self.p_kond, 'T': T2, 'h': h2, 's': s2}
-            
-            # Kondensataustritt
+
             h3 = CP.PropsSI('H', 'P', self.p_kond, 'Q', 0, self.fluid)
             s3 = CP.PropsSI('S', 'P', self.p_kond, 'Q', 0, self.fluid)
             T3 = CP.PropsSI('T', 'P', self.p_kond, 'Q', 0, self.fluid)
             self.zustand['3'] = {'p': self.p_kond, 'T': T3, 'h': h3, 's': s3}
-            
-            # Pumpe (Wahlweise vernachlässigt)
+
             if self.ignore_pump:
                 h4 = h3; h4s = h3; s4 = s3; T4 = T3; T4s = T3
             else:
@@ -59,7 +56,7 @@ class ClausiusRankineProzess:
             self.q_zu = (h1 - h4) / 1000
             
         else:
-            # Mit ZÜ: Entspannung HD-Turbine auf p_zue
+    
             h2s = CP.PropsSI('H', 'P', self.p_zue, 'S', s1, self.fluid)
             h2 = h1 - self.eta_s_T * (h1 - h2s)
             T2s = CP.PropsSI('T', 'P', self.p_zue, 'H', h2s, self.fluid)
@@ -68,12 +65,10 @@ class ClausiusRankineProzess:
             self.zustand['2s'] = {'p': self.p_zue, 'T': T2s, 'h': h2s, 's': s1}
             self.zustand['2'] = {'p': self.p_zue, 'T': T2, 'h': h2, 's': s2}
             
-            # Zwischenüberhitzung auf T_zue
             h3z = CP.PropsSI('H', 'P', self.p_zue, 'T', self.T_zue, self.fluid)
             s3z = CP.PropsSI('S', 'P', self.p_zue, 'T', self.T_zue, self.fluid)
             self.zustand['3z'] = {'p': self.p_zue, 'T': self.T_zue, 'h': h3z, 's': s3z}
             
-            # Entspannung ND-Turbine auf p_kond
             h4s = CP.PropsSI('H', 'P', self.p_kond, 'S', s3z, self.fluid)
             h4 = h3z - self.eta_s_T * (h3z - h4s)
             T4s = CP.PropsSI('T', 'P', self.p_kond, 'H', h4s, self.fluid)
@@ -81,14 +76,12 @@ class ClausiusRankineProzess:
             s4 = CP.PropsSI('S', 'P', self.p_kond, 'H', h4, self.fluid)
             self.zustand['4s'] = {'p': self.p_kond, 'T': T4s, 'h': h4s, 's': s3z}
             self.zustand['4'] = {'p': self.p_kond, 'T': T4, 'h': h4, 's': s4}
-            
-            # Kondensataustritt
+
             h5 = CP.PropsSI('H', 'P', self.p_kond, 'Q', 0, self.fluid)
             s5 = CP.PropsSI('S', 'P', self.p_kond, 'Q', 0, self.fluid)
             T5 = CP.PropsSI('T', 'P', self.p_kond, 'Q', 0, self.fluid)
             self.zustand['5'] = {'p': self.p_kond, 'T': T5, 'h': h5, 's': s5}
-            
-            # Pumpe
+
             if self.ignore_pump:
                 h6 = h5; h6s = h5; s6 = s5; T6 = T5; T6s = T5
             else:
@@ -105,7 +98,7 @@ class ClausiusRankineProzess:
             self.w_p = (h6 - h5) / 1000
             q_kessel = (h1 - h6) / 1000
             q_zue_stufe = (h3z - h2) / 1000
-            # Wenn q_zue_stufe negativ ist (Abkühlung), darf das nicht den Brennstoffbedarf (q_zu) senken!
+
             if q_zue_stufe < 0:
                 q_zue_stufe = 0 
             self.q_zu = q_kessel + q_zue_stufe
@@ -200,8 +193,7 @@ class ClausiusRankineProzess:
         return s, T, hover, keys
 
     def get_tabellen_daten(self):
-        # Filtert theoretische isentrope Zustände ('s') heraus, 
-        # sodass nur die 4 bzw. 6 realen physikalischen Hauptpunkte in der Tabelle landen.
+
         if not self.has_zue:
             keys = ['1', '2', '3', '4']
             labels = [
