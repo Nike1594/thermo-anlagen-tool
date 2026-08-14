@@ -573,7 +573,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
         eta_is_nd = st.session_state.k_eta_input / 100.0
         eta_is_hd = eta_is_nd 
     
-    col_img, col_diag = st.columns([1, 1.5])
+    col_img, col_diag = st.columns([1, 1])
     
     with col_img:
         st.subheader("Anlagenschema")
