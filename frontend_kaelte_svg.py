@@ -1,15 +1,11 @@
 import math
 import re
 
-# =========================================================
-#  SVG-BAUSTEINE (klassische Kältekreis-Symbole)
-# =========================================================
-
 WHITE = "#ffffff"
-GREEN = "#3fae4a"   # Flüssigkeit (Hochdruck)
-BLUE = "#3f7fd6"    # Nassdampf / Sauggas (Niederdruck)
-RED = "#d64b3f"     # Heißgas (Hochdruck, gasförmig)
-PURPLE = "#9a4fd6"  # Mitteldruck
+GREEN = "#3fae4a"
+BLUE = "#3f7fd6"
+RED = "#d64b3f" 
+PURPLE = "#9a4fd6" 
 
 def line(x1, y1, x2, y2, color=WHITE, width=3):
     return f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{color}" stroke-width="{width}" stroke-linecap="round"/>'
@@ -19,7 +15,7 @@ def polyline(points, color=WHITE, width=3):
     return f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="{width}" stroke-linejoin="round" stroke-linecap="round"/>'
 
 def text(x, y, s, size=15, anchor="middle", color=WHITE, weight="normal"):
-    # Wandelt alle Indizes mit Unterstrich (z.B. p_c, μ_HD) automatisch in saubere SVG-Subscripts um
+
     s_formatted = re.sub(r'_([a-zA-Z0-9]+)', r'<tspan baseline-shift="sub" font-size="0.75em">\1</tspan>', s)
     return f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" fill="{color}" text-anchor="{anchor}" font-family="Arial, sans-serif" font-weight="{weight}">{s_formatted}</text>'
 
@@ -79,7 +75,6 @@ def mass_flow_marker(x, y, label, direction="down", color=WHITE):
         svg += text(x, y - 10, label, 15, "middle", color, weight="bold")
     return svg
 
-# --- Komponenten-Symbole ---
 def heat_exchanger(cx, cy, name, fill):
     w, h = 170, 110
     x, y = cx - w / 2, cy - h / 2
@@ -146,10 +141,6 @@ def zk_box(cx, cy, name="Äußerer ZK"):
     svg += text(cx, y + h + 24, name, 15, weight="bold")
     return svg
 
-# =========================================================
-#  LAYOUT-ENGINE
-# =========================================================
-
 def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
     CANVAS_W = 1080
     left_x = 250
@@ -162,13 +153,11 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
     LANE_SUCTION = right_x - 100
     LANE_COMP    = right_x
 
-    # --- linke Kette (Flüssigkeitsseite) ---
     left_mid = ["D1"]
     if has_mdf:
         left_mid.append("MDF")
         left_mid.append("D2")
 
-    # --- rechte Kette (Verdichterseite) ---
     right_mid = []
     if is_2stage:
         right_mid.append("VD_ND")
@@ -200,7 +189,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
     R = 48  
     elements = []
 
-    # ---------- Linke Kette (Flüssigkeit / Nassdampf) ----------
     left_chain = ["K"] + left_mid + ["V"]
     for i in range(len(left_chain) - 1):
         a, b = left_chain[i], left_chain[i + 1]
@@ -216,7 +204,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
             mid_y = (pa[1] + pb[1]) / 2 + 15 
             elements.append(side_label(left_x, mid_y, lbl, "left", color))
 
-        # Massenstrom-Indikatoren auf der linken Seite
         if is_2stage and has_mdf:
             marker_y = pb[1] - 45 
             if a == "K" and b == "D1":
@@ -224,7 +211,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
             elif a == "D2" and b == "V":
                 elements.append(mass_flow_marker(left_x + 35, marker_y, "μ_ND", "down", WHITE))
 
-    # ---------- Rechte Kette (Sauggas / Mitteldruck / Heißgas) ----------
     def mdf_ports():
         mcx, mcy = pos["MDF"]
         return {"gas_in": (mcx + 28, mcy + 20), "gas_out": (mcx + 28, mcy - 20)}
@@ -243,7 +229,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
             a, b = right_mid[i], right_mid[i + 1]
             pa, pb = pos[a], pos[b]
 
-            # Abschnitt zwischen ND-Verdichter und ZK
             if a == "VD_ND" and b == "ZK":
                 elements.append(line(pa[0], pa[1]-R, pb[0], pb[1]+30, PURPLE, 3.5))
                 elements.append(mass_flow_marker(pa[0], (pa[1]-R + pb[1]+30)/2, "μ_ND", "up", WHITE))
@@ -300,7 +285,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
     elements.append(polyline(pts, RED, 3.5))
     elements.append(path_label(pts, "Heißgas  p_c", RED))
 
-    # ---------- Symbole zeichnen (über den Linien) ----------
     elements.append(heat_exchanger(*pos["K"], "Kondensator", "#4a2323"))
     elements.append(heat_exchanger(*pos["V"], "Verdampfer", "#23304a"))
 
@@ -320,9 +304,6 @@ def generate_svg(is_2stage, has_mdf, has_zk, mdf_mode="partiell"):
             label_txt = {"VD": "Verdichter", "VD_ND": "Verdichter ND", "VD_HD": "Verdichter HD"}[node]
             elements.append(compressor(cx, cy, label_txt))
 
-    # =========================================================
-    # DYNAMISCHE ZUSTANDSPUNKTE (Jede Leitung genau eine Nummer)
-    # =========================================================
     state_svgs = []
     point_num = 1
 
