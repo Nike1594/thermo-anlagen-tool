@@ -6,14 +6,14 @@
 
 Diese interaktive Web-Applikation ermöglicht die thermodynamische Auslegung, Simulation und Visualisierung von thermischen Kreisprozessen. Sie dient als digitales Werkzeug zur Untersuchung von realen und idealen Betriebsbedingungen in der Energietechnik.
 
-## 🚀 Live Demo
+## Live Demo
 Die Anwendung ist direkt im Browser nutzbar, ohne lokale Installation:
 👉 **[Hier geht es zur App](HIER_DEINEN_STREAMLIT_LINK_EINTRAGEN)**
 
-## 📖 Über das Projekt
+## Über das Projekt
 Dieses Tool entstand im Rahmen eines Masterprojekts im Studiengang **Gebäude- und Energietechnik** an der **HTWK Leipzig** (Betreuung: Prof. Dr.-Ing. Göpfert). Ziel war es, komplexe thermodynamische Berechnungen durch eine intuitive Benutzeroberfläche zugänglich zu machen und die Abhängigkeiten einzelner Anlagenparameter visuell erfahrbar zu machen.
 
-## ✨ Kernfunktionen
+## Kernfunktionen
 Das Tool umfasst aktuell drei detaillierte Simulationsmodule:
 
 *   **Clausius-Rankine-Prozess (Dampfkraftwerk)**
@@ -27,7 +27,7 @@ Das Tool umfasst aktuell drei detaillierte Simulationsmodule:
     *   Schaltungsvarianten: Mitteldruckflasche (partiell/Quenchen) und äußere Zwischenkühlung.
     *   Hochauflösende Parameterstudien (Contour-Plots) zur Ermittlung von EER und COP unter Berücksichtigung von Verdichterschutzgrenzen (Heißgastemperatur < 120 °C).
 
-## 🛠️ Verwendete Technologien
+## Verwendete Technologien
 Das Backend basiert auf physikalischen Massen- und Energiebilanzen unter Verwendung präziser Stoffdaten:
 *   **[Streamlit](https://streamlit.io/):** Frontend-Framework für das interaktive UI.
 *   **[CoolProp](http://www.coolprop.org/):** Hochgenaue thermodynamische Stoffdatenbibliothek (Open-Source-Alternative zu REFPROP).
