@@ -40,3 +40,7 @@ Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
    ```bash
    git clone https://github.com/Nike1594/thermo-anlagen-tool.git
    cd thermo-anlagen-tool
+2. Abhängigkeiten installieren:
+   pip install -r requirements.txt
+3. App starten:
+   streamlit run app.py
