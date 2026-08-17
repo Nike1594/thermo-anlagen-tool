@@ -8,7 +8,7 @@ Diese interaktive Web-Applikation ermöglicht die thermodynamische Auslegung, Si
 
 ## Live Demo
 Die Anwendung ist direkt im Browser nutzbar, ohne lokale Installation:
-👉 **[Hier geht es zur App](HIER_DEINEN_STREAMLIT_LINK_EINTRAGEN)**
+**[Hier geht es zur App]((https://thermo-anlagen-berechnungen.streamlit.app/))**
 
 ## Über das Projekt
 Dieses Tool entstand im Rahmen eines Masterprojekts im Studiengang **Gebäude- und Energietechnik** an der **HTWK Leipzig** (Betreuung: Prof. Dr.-Ing. Göpfert). Ziel war es, komplexe thermodynamische Berechnungen durch eine intuitive Benutzeroberfläche zugänglich zu machen und die Abhängigkeiten einzelner Anlagenparameter visuell erfahrbar zu machen.
