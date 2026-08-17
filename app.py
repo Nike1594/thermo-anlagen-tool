@@ -239,7 +239,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     if has_zue:
         st.sidebar.markdown("**Zwischenüberhitzung**")
         
-        # Dynamische Grenzen berechnen
+        # --- Dynamische Grenzen für den Druck ---
         p_zue_min = float(p_kond) + 0.1
         p_zue_max = float(p_verd) - 1.0
         p_zue_default = float(p_verd) / 2.0
@@ -254,17 +254,25 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             st.session_state["cr_p_zue_input"] = p_zue_min
             
         create_synced_input("Zwischendruck $p_{ZÜ}$ (bar)", "cr_p_zue", p_zue_min, p_zue_max, 1.0)
-
-        ensure_default("cr_T_zue", float(T_max))
-            
-        if st.session_state["cr_T_zue_slider"] > float(T_max):
-            st.session_state["cr_T_zue_slider"] = float(T_max)
-            st.session_state["cr_T_zue_input"] = float(T_max)
-            
-        create_synced_input("Zwischentemperatur $T_{ZÜ}$ (°C)", "cr_T_zue", 200.0, float(T_max), 10.0)
-        
         p_zue = st.session_state.cr_p_zue_input
-        T_zue = st.session_state.cr_T_zue_input
+
+        # --- Sicherheitsabfrage für die Temperatur ---
+        T_max_float = float(T_max)
+        
+        # Wenn T_max auf 200 ist, darf kein Slider erzeugt werden (verhindert Streamlit-Absturz)
+        if T_max_float <= 200.0:
+            st.sidebar.info("T_max ist am Minimum. Die Zwischentemperatur wird automatisch auf 200 °C fixiert.")
+            T_zue = 200.0
+        else:
+            ensure_default("cr_T_zue", T_max_float)
+                
+            if st.session_state["cr_T_zue_slider"] > T_max_float:
+                st.session_state["cr_T_zue_slider"] = T_max_float
+                st.session_state["cr_T_zue_input"] = T_max_float
+                
+            create_synced_input("Zwischentemperatur $T_{ZÜ}$ (°C)", "cr_T_zue", 200.0, T_max_float, 10.0)
+            T_zue = st.session_state.cr_T_zue_input
+            
     else:
         p_zue, T_zue = None, None
         
@@ -877,10 +885,9 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
     st.subheader(f"Parameterstudie: COP (Wärmepumpe) vs. EER (Kältemaschine)")
     st.write(f"Einfluss der Temperaturniveaus auf die Effizienz im **{bautyp_text}** Betrieb. Der graue Bereich markiert die absolute technische Grenze durch Ölzersetzung im Verdichter (Heißgastemperatur $> 120 °C$).")
     
-if st.button("Parameterfelder berechnen (Contour-Plots)"):
+    if st.button("Parameterfelder berechnen (Contour-Plots)"):
         with st.spinner(f"Berechne Leistungsfelder ({bautyp_text}) inklusive Verdichterschutz..."):
             
-            # Variablen-Sicherung (verhindert Abstürze, falls Checkboxen deaktiviert sind)
             safe_sh_mode = sh_mode if has_sh else None
             safe_dT_sh_input = dT_sh_input if (has_sh and sh_mode == "um (ΔT)") else 0.0
             safe_T_sh_input = T_sh_input if (has_sh and sh_mode == "auf (T)") else 0.0
@@ -898,7 +905,7 @@ if st.button("Parameterfelder berechnen (Contour-Plots)"):
             if n_failed:
                 st.caption(f"Hinweis: {n_failed} von {cop_heiz_grid.size} Gitterpunkten sind nicht konvergiert und wurden ausgeblendet.")
 
-            # --- Plot 1: Wärmepumpe (Heizen) ---
+            # Plot 1: Wärmepumpe
             fig_heiz = go.Figure(data=go.Contour(
                 z=cop_heiz_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Inferno", 
@@ -916,7 +923,7 @@ if st.button("Parameterfelder berechnen (Contour-Plots)"):
                 height=500, margin=dict(l=40, r=40, t=60, b=40)
             )
 
-            # --- Plot 2: Kältemaschine (Kühlen) ---
+            # Plot 2: Kältemaschine
             fig_kalt = go.Figure(data=go.Contour(
                 z=eer_kalt_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Viridis", 
