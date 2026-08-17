@@ -121,7 +121,9 @@ def berechne_zue_feld(p_kond, p_verd, T_max, m_dot, eta_s_P, eta_s_T, ignore_pum
 
 
 @st.cache_data(show_spinner=False)
-def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_zk_input, eta_is_nd, eta_is_hd):
+def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_zk_input, eta_is_nd, eta_is_hd,
+                             has_sh, sh_mode, dT_sh_input, T_sh_input,
+                             has_sc, sc_mode, dT_sc_input, T_sc_input):
     T_verd_arr = np.linspace(-75.0, 20.0, 60)
     T_kond_arr = np.linspace(25.0, 75.0, 60)
 
@@ -137,6 +139,22 @@ def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_
                 eer_kalt_grid[i, j] = None
                 continue
 
+            dT_sh_local = 0.0
+            if has_sh:
+                if sh_mode == "um (ΔT)":
+                    dT_sh_local = dT_sh_input
+                else:
+                    dT_sh_local = T_sh_input - T_v
+                    if dT_sh_local < 0: dT_sh_local = 0.0
+
+            dT_sc_local = 0.0
+            if has_sc:
+                if sc_mode == "um (ΔT)":
+                    dT_sc_local = dT_sc_input
+                else:
+                    dT_sc_local = T_k - T_sc_input
+                    if dT_sc_local < 0: dT_sc_local = 0.0
+
             try:
                 if is_2stage:
                     p_0_temp = CP.PropsSI('P', 'T', T_v + 273.15, 'Q', 1, fluid)
@@ -151,8 +169,8 @@ def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_
                     T_0_C=T_v,
                     T_c_C=T_k,
                     T_m_C=T_m_opt_C,
-                    dT_sh=5.0,
-                    dT_sc=2.0,
+                    dT_sh=dT_sh_local,
+                    dT_sc=dT_sc_local,
                     eta_is_nd=eta_is_nd,
                     eta_is_hd=eta_is_hd
                 )
@@ -859,15 +877,28 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
     st.subheader(f"Parameterstudie: COP (Wärmepumpe) vs. EER (Kältemaschine)")
     st.write(f"Einfluss der Temperaturniveaus auf die Effizienz im **{bautyp_text}** Betrieb. Der graue Bereich markiert die absolute technische Grenze durch Ölzersetzung im Verdichter (Heißgastemperatur $> 120 °C$).")
     
-    if st.button("Parameterfelder berechnen (Contour-Plots)"):
+if st.button("Parameterfelder berechnen (Contour-Plots)"):
         with st.spinner(f"Berechne Leistungsfelder ({bautyp_text}) inklusive Verdichterschutz..."):
+            
+            # Variablen-Sicherung (verhindert Abstürze, falls Checkboxen deaktiviert sind)
+            safe_sh_mode = sh_mode if has_sh else None
+            safe_dT_sh_input = dT_sh_input if (has_sh and sh_mode == "um (ΔT)") else 0.0
+            safe_T_sh_input = T_sh_input if (has_sh and sh_mode == "auf (T)") else 0.0
+
+            safe_sc_mode = sc_mode if has_sc else None
+            safe_dT_sc_input = dT_sc_input if (has_sc and sc_mode == "um (ΔT)") else 0.0
+            safe_T_sc_input = T_sc_input if (has_sc and sc_mode == "auf (T)") else 0.0
+
             cop_heiz_grid, eer_kalt_grid, T_verd_arr, T_kond_arr, n_failed = berechne_effizienzfelder(
-                fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_zk_input, eta_is_nd, eta_is_hd
+                fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_zk_input, eta_is_nd, eta_is_hd,
+                has_sh, safe_sh_mode, safe_dT_sh_input, safe_T_sh_input,
+                has_sc, safe_sc_mode, safe_dT_sc_input, safe_T_sc_input
             )
 
             if n_failed:
                 st.caption(f"Hinweis: {n_failed} von {cop_heiz_grid.size} Gitterpunkten sind nicht konvergiert und wurden ausgeblendet.")
 
+            # --- Plot 1: Wärmepumpe (Heizen) ---
             fig_heiz = go.Figure(data=go.Contour(
                 z=cop_heiz_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Inferno", 
@@ -885,6 +916,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                 height=500, margin=dict(l=40, r=40, t=60, b=40)
             )
 
+            # --- Plot 2: Kältemaschine (Kühlen) ---
             fig_kalt = go.Figure(data=go.Contour(
                 z=eer_kalt_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Viridis", 
