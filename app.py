@@ -97,8 +97,40 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     
     if has_zue:
         st.sidebar.markdown("**Zwischenüberhitzung**")
-        p_zue = st.sidebar.slider("Zwischendruck $p_{ZÜ}$ (bar)", min_value=float(p_kond)+0.1, max_value=float(p_verd)-1.0, value=float(p_verd)/2, step=1.0)
-        T_zue = st.sidebar.slider("Zwischentemperatur $T_{ZÜ}$ (°C)", min_value=200.0, max_value=float(T_max), value=float(T_max), step=10.0)
+        
+        # Dynamische Grenzen berechnen
+        p_zue_min = float(p_kond) + 0.1
+        p_zue_max = float(p_verd) - 1.0
+        p_zue_default = float(p_verd) / 2.0
+        
+        # Session States initialisieren, falls noch nicht vorhanden
+        if "cr_p_zue_slider" not in st.session_state:
+            st.session_state["cr_p_zue_slider"] = p_zue_default
+            st.session_state["cr_p_zue_input"] = p_zue_default
+        
+        # Sicherheits-Check: Verhindert Streamlit-Absturz, wenn der Kesseldruck gesenkt wird
+        if st.session_state["cr_p_zue_slider"] > p_zue_max:
+            st.session_state["cr_p_zue_slider"] = p_zue_max
+            st.session_state["cr_p_zue_input"] = p_zue_max
+        elif st.session_state["cr_p_zue_slider"] < p_zue_min:
+            st.session_state["cr_p_zue_slider"] = p_zue_min
+            st.session_state["cr_p_zue_input"] = p_zue_min
+            
+        create_synced_input("Zwischendruck $p_{ZÜ}$ (bar)", "cr_p_zue", p_zue_min, p_zue_max, 1.0)
+        
+        # Das Gleiche für die Zwischentemperatur
+        if "cr_T_zue_slider" not in st.session_state:
+            st.session_state["cr_T_zue_slider"] = float(T_max)
+            st.session_state["cr_T_zue_input"] = float(T_max)
+            
+        if st.session_state["cr_T_zue_slider"] > float(T_max):
+            st.session_state["cr_T_zue_slider"] = float(T_max)
+            st.session_state["cr_T_zue_input"] = float(T_max)
+            
+        create_synced_input("Zwischentemperatur $T_{ZÜ}$ (°C)", "cr_T_zue", 200.0, float(T_max), 10.0)
+        
+        p_zue = st.session_state.cr_p_zue_input
+        T_zue = st.session_state.cr_T_zue_input
     else:
         p_zue, T_zue = None, None
         
@@ -107,8 +139,21 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     
     st.sidebar.divider()
     st.sidebar.header("Reale Verluste")
-    eta_s_P = st.sidebar.slider(r"Isentroper Wirkungsgrad Pumpe $\eta_{s,P}$ (%)", 50.0, 100.0, 80.0, 1.0) / 100
-    eta_s_T = st.sidebar.slider(r"Isentroper Wirkungsgrad Turbine $\eta_{s,T}$ (%)", 50.0, 100.0, 85.0, 1.0) / 100
+    
+    # Synced Inputs für Wirkungsgrade initialisieren
+    if "cr_eta_s_P_slider" not in st.session_state:
+        st.session_state["cr_eta_s_P_slider"] = 80.0
+        st.session_state["cr_eta_s_P_input"] = 80.0
+    create_synced_input(r"Isentroper Wirkungsgrad Pumpe $\eta_{s,P}$ (%)", "cr_eta_s_P", 50.0, 100.0, 1.0, format="%.0f")
+    
+    if "cr_eta_s_T_slider" not in st.session_state:
+        st.session_state["cr_eta_s_T_slider"] = 85.0
+        st.session_state["cr_eta_s_T_input"] = 85.0
+    create_synced_input(r"Isentroper Wirkungsgrad Turbine $\eta_{s,T}$ (%)", "cr_eta_s_T", 50.0, 100.0, 1.0, format="%.0f")
+    
+    # Werte als Dezimalzahl (0.5 bis 1.0) an die Klasse übergeben
+    eta_s_P = st.session_state.cr_eta_s_P_input / 100.0
+    eta_s_T = st.session_state.cr_eta_s_T_input / 100.0
     
     m_dot = st.session_state.cr_m_dot_input
     
