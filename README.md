@@ -46,3 +46,8 @@ Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
 4. App starten:
    ```bash
    streamlit run app.py
+
+## Autor
+Nils Kellner
+
+Masterstudent Gebäude- und Energietechnik, HTWK Leipzig
