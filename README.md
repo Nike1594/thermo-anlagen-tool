@@ -34,7 +34,7 @@ Das Backend basiert auf physikalischen Massen- und Energiebilanzen unter Verwend
 *   **[Plotly](https://plotly.com/python/):** Interaktive Visualisierung der log-p-h- und T-s-Diagramme sowie der Parameterfelder.
 *   **NumPy:** Vektorisierte Berechnungen für performante Parameterstudien.
 
-## 💻 Lokale Installation (Für Entwickler)
+##  Lokale Installation
 Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
 
 1. Repository klonen:
