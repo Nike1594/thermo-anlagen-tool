@@ -32,6 +32,7 @@ Das Backend basiert auf physikalischen Massen- und Energiebilanzen unter Verwend
 *   **[CoolProp](http://www.coolprop.org/):** thermodynamische Stoffdatenbibliothek (Open-Source-Alternative zu REFPROP).
 *   **[Plotly](https://plotly.com/python/):** Interaktive Visualisierung der log-p-h- und T-s-Diagramme sowie der Parameterfelder.
 *   **NumPy:** Vektorisierte Berechnungen für Parameterstudien.
+*   **[diagrams.net](https://app.diagrams.net/):** Anlagenschaltschemata zur grafischen Veranschaulichung der Kreisprozesse
 
 ## Lokale Installation
 Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
