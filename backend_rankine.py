@@ -7,23 +7,27 @@ import CoolProp.CoolProp as CP
 ZustandDict = Dict[str, float]
 
 
-@lru_cache(maxsize=1)
-def _saettigungslinie_wasser() -> Tuple[Tuple[float, ...], Tuple[float, ...]]:
-
-    fluid = "Water"
+@lru_cache(maxsize=32)
+def _saettigungslinie_fluid(fluid: str) -> Tuple[Tuple[float, ...], Tuple[float, ...]]:
+    """Berechnet die Siede- und Taulinie für ein beliebiges Fluid dynamisch."""
     t_krit = CP.PropsSI("Tcrit", fluid)
-    t_kurve = np.linspace(273.15 + 0.1, t_krit - 0.1, 100)
+
+    t_min_fluid = CP.PropsSI("Tmin", fluid)
+    t_start = max(t_min_fluid + 0.1, 200.0) 
+    
+    t_kurve = np.linspace(t_start, t_krit - 0.1, 100)
     s_siedelinie = [CP.PropsSI("S", "T", t, "Q", 0, fluid) / 1000 for t in t_kurve]
     s_taulinie = [CP.PropsSI("S", "T", t, "Q", 1, fluid) / 1000 for t in t_kurve]
     T_kurve_C = [t - 273.15 for t in t_kurve]
+    
     s_g = s_siedelinie + s_taulinie[::-1]
     T_g = T_kurve_C + T_kurve_C[::-1]
     return tuple(s_g), tuple(T_g)
 
 
 class ClausiusRankineProzess:
-    _FLUID = "Water"
-    _ref_state_gesetzt = False
+    _ref_states_gesetzt = set()
+
     def __init__(
         self,
         p_kond: float,
@@ -36,15 +40,20 @@ class ClausiusRankineProzess:
         has_zue: bool = False,
         p_zue: Optional[float] = None,
         T_zue: Optional[float] = None,
+        fluid: str = "Water"
     ) -> None:
+        self.fluid = fluid
+        
         if has_zue and (p_zue is None or T_zue is None):
             raise ValueError("Bei has_zue=True müssen p_zue und T_zue angegeben werden.")
 
-        if not ClausiusRankineProzess._ref_state_gesetzt:
-            CP.set_reference_state(self._FLUID, "DEF")
-            ClausiusRankineProzess._ref_state_gesetzt = True
+        if self.fluid not in ClausiusRankineProzess._ref_states_gesetzt:
+            try:
+                CP.set_reference_state(self.fluid, "DEF")
+            except ValueError:
+                pass
+            ClausiusRankineProzess._ref_states_gesetzt.add(self.fluid)
 
-        self.fluid = self._FLUID
         self.p_kond = p_kond * 1e5
         self.p_kessel = p_kessel * 1e5
         self.T_max = T_max + 273.15
@@ -102,9 +111,13 @@ class ClausiusRankineProzess:
     # Hauptberechnung
 
     def berechne_zustaende(self) -> None:
-        """Berechnet alle Zustandspunkte sowie die Kennzahlen des Prozesses."""
-        h1 = CP.PropsSI("H", "P", self.p_kessel, "T", self.T_max, self.fluid)
-        s1 = CP.PropsSI("S", "P", self.p_kessel, "T", self.T_max, self.fluid)
+        try:
+            h1 = CP.PropsSI("H", "P", self.p_kessel, "T", self.T_max, self.fluid)
+            s1 = CP.PropsSI("S", "P", self.p_kessel, "T", self.T_max, self.fluid)
+        except ValueError:
+            h1 = CP.PropsSI("H", "P", self.p_kessel, "Q", 1, self.fluid)
+            s1 = CP.PropsSI("S", "P", self.p_kessel, "Q", 1, self.fluid)
+
         self.zustand["1"] = {"p": self.p_kessel, "T": self.T_max, "h": h1, "s": s1}
 
         if not self.has_zue:
@@ -124,8 +137,12 @@ class ClausiusRankineProzess:
         else:
             self.zustand["2s"], self.zustand["2"] = self._turbinenstufe(h1, s1, self.p_zue)
 
-            h3z = CP.PropsSI("H", "P", self.p_zue, "T", self.T_zue, self.fluid)
-            s3z = CP.PropsSI("S", "P", self.p_zue, "T", self.T_zue, self.fluid)
+            try:
+                h3z = CP.PropsSI("H", "P", self.p_zue, "T", self.T_zue, self.fluid)
+                s3z = CP.PropsSI("S", "P", self.p_zue, "T", self.T_zue, self.fluid)
+            except ValueError:
+                h3z = CP.PropsSI("H", "P", self.p_zue, "Q", 1, self.fluid)
+                s3z = CP.PropsSI("S", "P", self.p_zue, "Q", 1, self.fluid)
             self.zustand["3z"] = {"p": self.p_zue, "T": self.T_zue, "h": h3z, "s": s3z}
 
             self.zustand["4s"], self.zustand["4"] = self._turbinenstufe(h3z, s3z, self.p_kond)
@@ -158,8 +175,8 @@ class ClausiusRankineProzess:
     # Diagrammdaten
 
     def get_saettigungslinie(self) -> Tuple[List[float], List[float]]:
-        """Siede-/Taulinie von Wasser für das T-s-Diagramm (gecacht)."""
-        s_g, T_g = _saettigungslinie_wasser()
+        """Holt die dynamische Siede-/Taulinie für das gewählte Fluid aus dem Cache."""
+        s_g, T_g = _saettigungslinie_fluid(self.fluid)
         return list(s_g), list(T_g)
 
     def _get_boiling_curve(self, start_idx: str, p_target: float):
@@ -174,7 +191,15 @@ class ClausiusRankineProzess:
 
     def _get_superheat_curve(self, p_target: float, T_end: float):
         h_sat = CP.PropsSI("H", "P", p_target, "Q", 1, self.fluid)
-        h_end = CP.PropsSI("H", "P", p_target, "T", T_end, self.fluid)
+        try:
+            h_end = CP.PropsSI("H", "P", p_target, "T", T_end, self.fluid)
+        except ValueError:
+
+            h_end = h_sat
+
+        if h_sat >= h_end - 0.1:
+            return [], []
+            
         h_arr = np.linspace(h_sat, h_end, 20)
         s_arr = [CP.PropsSI("S", "P", p_target, "H", h, self.fluid) / 1000 for h in h_arr]
         T_arr_C = [CP.PropsSI("T", "P", p_target, "H", h, self.fluid) - 273.15 for h in h_arr]
