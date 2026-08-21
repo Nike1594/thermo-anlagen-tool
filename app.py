@@ -122,6 +122,11 @@ def get_orc_fluids():
         "Isobutan (R600a)": "IsoButane",
         "n-Pentan": "n-Pentane",
         "Isopentan": "Isopentane",
+        "Cyclopentan": "CycloPentane", 
+        "Siloxan MM": "MM",            
+        "Siloxan MDM": "MDM",          
+        "Siloxan D4": "D4",            
+        "Siloxan D5": "D5",            
         "Ethanol": "Ethanol",
         "Toluol": "Toluene",
         "R134a": "R134a",
@@ -270,7 +275,8 @@ def get_orc_bounds(fluid_display):
     else:
         return {"p1": (0.02, 10.0, 0.5), "p2": (2.0, 100.0, 20.0), "T3": (80.0, 400.0, 250.0)}
 
-# 2. Clausius-Rankine-Prozess
+
+# 2. CLAUSIUS-RANKINE-PROZESS
 if prozess_auswahl == "Clausius-Rankine-Prozess":
     st.title("Clausius-Rankine-Prozess (bzw. ORC)")
     st.write("Vergleich: Idealer (reversibler) vs. Realer (irreversibler) Kreisprozess.")
@@ -286,7 +292,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
         "Arbeitsfluid", 
         list(orc_mapping.keys()), 
         index=list(orc_mapping.keys()).index(st.session_state["last_cr_fluid"]),
-        help="Wähle das Arbeitsmedium. ORC-Fluide (Kältemittel, Kohlenwasserstoffe) eignen sich zur Nutzung von Niedertemperatur-Abwärme."
+        help="Wähle das Arbeitsmedium. ORC-Fluide (Kältemittel, Kohlenwasserstoffe, Siloxane) eignen sich zur Nutzung von Niedertemperatur-Abwärme."
     )
     cr_fluid = orc_mapping[selected_orc_display]
     
@@ -604,29 +610,59 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             with st.expander("Technisches Fehlerdetail (CoolProp)"):
                 st.code(e)
 
-# 3. JOULE-PROZESS
+# 3. JOULE-PROZESS & GuD-KRAFTWERK
 elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
-    st.title("Joule-Prozess (Offene Gasturbine)")
-    st.write("Vergleich: Idealer (reversibler) vs. Realer (irreversibler) Kreisprozess.")
+    st.title("Joule-Prozess & GuD-Kombikraftwerk")
+    st.write("Vergleich: Idealer vs. Realer Kreisprozess sowie Kopplung zum Gas-und-Dampf-Kombikraftwerk.")
     
     st.sidebar.header("Anlagenkonfiguration")
     fluid_name = st.sidebar.selectbox(
-        "Arbeitsfluid", ["Luft (zweiatomig)", "Helium (einatomig)", "Argon (einatomig)", "R744 (CO2)"],
+        "Arbeitsfluid (Gasturbine)", ["Luft (zweiatomig)", "Helium (einatomig)", "Argon (einatomig)", "R744 (CO2)"],
         help="Wähle das Arbeitsgas. Unterschiedliche Gase haben spezifische Wärmekapazitäten ($c_p$) und Isentropenexponenten ($\\kappa$), die den Prozess stark beeinflussen."
     )
     
-    st.sidebar.header("Zustandsgrößen")
+    has_gud = st.sidebar.toggle("GuD-Kopplung aktivieren", value=False, help="Schaltet einen Abhitzedampferzeuger (AHDE) und einen Wasserdampf- oder ORC-Kreisprozess nach, um die Abwärme der Gasturbine zu nutzen.")
+    
+    if has_gud:
+        st.sidebar.markdown("**GuD: Abhitzedampferzeuger (AHDE)**")
+        create_synced_input(
+            "Pinch-Point-Grädigkeit $\Delta T_{PP}$ (K)", "gud_pinch", 5.0, 50.0, 1.0,
+            help_text="**Pinch-Point-Grädigkeit**\n\nDefiniert die minimale Temperaturdifferenz zwischen dem heißen Abgas und dem verdampfenden Fluid. Ein kleinerer Pinch-Point erhöht die Dampfausbeute und den Wirkungsgrad, erfordert aber einen exponentiell größeren und teureren Wärmetauscher."
+        )
+        orc_mapping_gud = get_orc_fluids()
+        selected_gud_fluid_display = st.sidebar.selectbox(
+            "Arbeitsfluid (Dampfprozess)", 
+            list(orc_mapping_gud.keys()), 
+            index=0, 
+            help="In großen GuD-Anlagen wird ausnahmslos Wasser genutzt. Für Micro-Gasturbinen oder Biomasse-Konzepte können ORC-Fluide (wie Siloxane) verwendet werden. Achtung: Kältemittel zersetzen sich bei hohen Abgastemperaturen!"
+        )
+        gud_fluid = orc_mapping_gud[selected_gud_fluid_display]
+        create_synced_input(
+            "Abgastemperatur (Kamin) $T_{Abgas}$ (°C)", "gud_t_kamin", 60.0, 200.0, 5.0,
+            help_text="**Kamin-Abgastemperatur**\n\nDie Temperatur, mit der das abgekühlte Gas den Schornstein verlässt. Sie muss hoch genug sein (meist > 80-100 °C), um die Kondensation von korrosiven Säuren (Säuretaupunkt) in der Anlage zu verhindern."
+        )
+        create_synced_input(
+            "Kesseldruck Dampf $p_{kessel}$ (bar)", "gud_p_kessel", 1.0, 200.0, 5.0,
+            help_text="**Kesseldruck**\n\nVerdampfungsdruck im nachgeschalteten Dampfprozess. Achtung bei ORC-Fluiden und Siloxanen: Diese besitzen oft einen sehr niedrigen kritischen Druck (z.B. MM bei ca. 19 bar). Der Kesseldruck muss unter dem kritischen Punkt liegen!"
+        )
+        create_synced_input(
+            "Kondensatordruck Dampf $p_{kond}$ (bar)", "gud_p_kond", 0.02, 5.0, 0.01,
+            help_text="**Kondensatordruck**\n\nDruck der Wärmeabfuhr im Dampfprozess. Je niedriger, desto höher die Leistung der Dampfturbine. Begrenzt durch die Temperatur der Umgebung (Wärmesenke)."
+        )
+        st.sidebar.divider()
+    
+    st.sidebar.header("Zustandsgrößen Gasturbine")
     create_synced_input(
         "Ansaugtemperatur $T_1$ (°C)", "j_T1", -20.0, 50.0, 1.0,
-        help_text="**Ansaugtemperatur**\n\nTemperatur der angesaugten Luft/des Fluids. Je kälter, desto dichter das Gas und desto geringer die spezifische Verdichterarbeit."
+        help_text="**Ansaugtemperatur**\n\nTemperatur der angesaugten Luft bzw. des Fluids. Je kälter, desto dichter das Gas und desto geringer die spezifische Verdichterarbeit."
     )
     create_synced_input(
         "Ansaugdruck $p_1$ (bar)", "j_p1", 0.8, 1.2, 0.01,
-        help_text="**Ansaugdruck**\n\nDruck am Verdichtereintritt, entspricht bei offenen Gasturbinen in der Regel dem Umgebungsdruck."
+        help_text="**Ansaugdruck**\n\nDruck am Verdichtereintritt, entspricht bei offenen Gasturbinen in der Regel dem Umgebungsdruck (ca. 1 bar)."
     )
     create_synced_input(
-        "Max. Prozesstemp. $T_3$ (°C)", "j_T3", 500.0, 1500.0, 10.0,
-        help_text="**Turbineneintrittstemperatur**\n\nHöchste Temperatur im Prozess nach der Brennkammer. Ein höherer Wert steigert massiv den Wirkungsgrad, ist aber stark durch die Materialfestigkeit der Turbinenschaufeln begrenzt."
+        "Max. Prozesstemp. $T_3$ (°C)", "j_T3", 200.0, 1600.0, 10.0,
+        help_text="**Turbineneintrittstemperatur**\n\nHöchste Temperatur im Prozess. Bei Erdgas oft > 1000 °C, bei Biomasse materialbedingt oft deutlich geringer. Ist der Wert zu niedrig, reicht die Turbinenleistung nicht mehr aus, um den eigenen Verdichter anzutreiben."
     )
     
     T1_c = st.session_state.j_T1_input
@@ -642,8 +678,8 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         )
         if var_cp_mode:
             R_i = 287.1
-            T_table = np.array([200.0, 250.0, 263.15, 300.0, 500.0, 800.0, 1000.0, 1173.15, 1500.0])
-            cp_table = np.array([1002.0, 1003.0, 1003.5, 1005.0, 1030.0, 1099.0, 1142.0, 1170.6, 1211.0])
+            T_table = np.array([200.0, 250.0, 263.15, 300.0, 500.0, 800.0, 1000.0, 1173.15, 1500.0, 2000.0])
+            cp_table = np.array([1002.0, 1003.0, 1003.5, 1005.0, 1030.0, 1099.0, 1142.0, 1170.6, 1211.0, 1250.0])
             
             cp_T1 = np.interp(T1, T_table, cp_table)
             cp_T3 = np.interp(T3, T_table, cp_table)
@@ -669,21 +705,21 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         
     st.sidebar.divider()
     
-    st.sidebar.header("Reale Verluste")
+    st.sidebar.header("Reale Verluste (Gasturbine)")
     eta_s_V = st.sidebar.slider(
         r"Isentroper Wirkungsgrad Verdichter $\eta_{s,V}$ (%)", 50.0, 100.0, 85.0, 1.0,
-        help="**Isentroper Wirkungsgrad (Verdichter)**\n\nEin Teil der Verdichterarbeit geht durch Reibung in Wärme über. Ein Wert < 100% bedeutet, dass die Verdichterendtemperatur höher ausfällt als im idealen (isentropen) Fall."
+        help="**Isentroper Verdichterwirkungsgrad**\n\nEin Teil der Verdichterarbeit geht durch Reibung in Wärme über. Das Gas wird heißer als im idealen (isentropen) Fall und kostet mehr Arbeit."
     ) / 100
     eta_s_T = st.sidebar.slider(
         r"Isentroper Wirkungsgrad Turbine $\eta_{s,T}$ (%)", 50.0, 100.0, 88.0, 1.0,
-        help="**Isentroper Wirkungsgrad (Turbine)**\n\nNur ein Teil des Enthalpiegefälles kann genutzt werden. Der Rest bleibt als Abwärme im Gas, wodurch die Austrittstemperatur (Punkt 4) heißer ist als ideal berechnet."
+        help="**Isentroper Turbinenwirkungsgrad**\n\nBerücksichtigt Strömungsverluste in der Turbine. Die Austrittstemperatur bleibt höher als ideal berechnet, da ein Teil der Energie als Abwärme im Gas verbleibt."
     ) / 100
     
     st.sidebar.divider()
     
     opt_mode = st.sidebar.toggle(
         "Optimierungs-Modus (max. Arbeit)",
-        help="Berechnet exakt das Druckverhältnis $\\pi$, bei dem die spez. Nettoarbeit maximal wird. Theoretisches Optimum für Leistung, nicht zwingend für Wirkungsgrad."
+        help="Berechnet exakt das Druckverhältnis $\\pi$, bei dem die spez. Nettoarbeit maximal wird. Theoretisches Optimum für mechanische Leistung."
     )
     if opt_mode:
         tau = T3 / T1
@@ -691,18 +727,18 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         st.sidebar.success(f"Optimiertes Druckverhältnis $\pi$: **{pi:.2f}**")
     else:
         create_synced_input(
-            r"Druckverhältnis $\pi$", "j_pi", 2.0, 30.0, 0.1,
-            help_text="**Druckverhältnis**\n\n$\\pi = \\frac{p_2}{p_1}$\n\nVerhältnis von Verdichtungsenddruck zu Ansaugdruck."
+            r"Druckverhältnis $\pi$", "j_pi", 2.0, 40.0, 0.1,
+            help_text="**Druckverhältnis**\n\n$\\pi = \\frac{p_2}{p_1}$\n\nVerhältnis von Verdichtungsenddruck zu Ansaugdruck in der Gasturbine."
         )
         pi = st.session_state.j_pi_input
         
     create_synced_input(
-        r"Massenstrom $\dot{m}$ (kg/s)", "j_m_dot", 0.1, 5.0, 0.01,
-        help_text="**Massenstrom**\n\nSkalierungsfaktor der Anlage. Hat keinen Einfluss auf den Wirkungsgrad, bestimmt aber die absoluten kW-Leistungen."
+        r"Gas-Massenstrom $\dot{m}_{Gas}$ (kg/s)", "j_m_dot", 1.0, 100.0, 1.0,
+        help_text="**Gas-Massenstrom**\n\nSkalierungsfaktor der Anlage. Beeinflusst die absoluten kW-Leistungen, aber nicht die spezifischen kJ/kg-Werte oder den Wirkungsgrad."
     )
     
     p1_bar = st.session_state.j_p1_input
-    m_dot = st.session_state.j_m_dot_input
+    m_dot_gas = st.session_state.j_m_dot_input
     p1 = p1_bar * 100000 
     
     p2 = p1 * pi
@@ -727,9 +763,198 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     eta_th_real = w_net_real / q_zu_real if q_zu_real > 0 else 0
     omega_real = w_net_real / w_tT_real if w_tT_real > 0 else 0
     
-    P_tV_real = m_dot * w_tV_real
-    P_tT_real = m_dot * w_tT_real 
+    P_tV_real = m_dot_gas * w_tV_real
+    P_tT_real = m_dot_gas * w_tT_real 
+    Q_zu_Brennkammer = m_dot_gas * q_zu_real
     
+    # GuD-Kopplung
+    gud_error = False
+    if has_gud:
+        pinch = st.session_state.gud_pinch_input
+        t_kamin = st.session_state.gud_t_kamin_input
+        p_kessel = st.session_state.gud_p_kessel_input
+        p_kond = st.session_state.gud_p_kond_input
+        
+        T_max_dampf = (T4 - 273.15) - pinch
+        
+        if t_kamin < 80.0:
+            st.warning("**Gefahr von Säuretaupunkt-Unterschreitung:** Die Abgastemperatur im Kamin liegt unter 80 °C. Korrosionsschäden im AHDE sind wahrscheinlich.")
+        if T_max_dampf < 100.0:
+            st.error("Die Abgastemperatur der Gasturbine ist zu niedrig für eine sinnvolle Dampferzeugung. Bitte Druckverhältnis oder T3 anpassen.")
+            gud_error = True
+            
+        if not gud_error:
+            try:
+                p_crit_pa = CP.PropsSI('PCRIT', gud_fluid)
+                p_crit_bar = p_crit_pa / 100000.0
+            except:
+                p_crit_bar = 221.2
+                
+            if p_kessel >= p_crit_bar:
+                st.error(f"**Überkritischer Kesseldruck:** Der gewählte Kesseldruck von **{p_kessel:.1f} bar** liegt über dem kritischen Druck von **{selected_gud_fluid_display}** (**{p_crit_bar:.1f} bar**). Siloxane und viele ORC-Fluide besitzen ein relativ niedriges Drucklimit am kritischen Punkt. Bitte reduziere den Kesseldruck unter {p_crit_bar:.1f} bar.")
+                gud_error = True
+
+        if not gud_error:
+            # Rankine Prozess initialisieren (Dummy-Massenstrom 1.0 zur Ermittlung von q_zu)
+            gud_dampf = ClausiusRankineProzess(
+                fluid=gud_fluid, 
+                p_kond=p_kond, p_kessel=p_kessel, T_max=T_max_dampf, m_dot=1.0, 
+                eta_s_P=0.85, eta_s_T=0.88
+            )
+            try:
+                gud_dampf.berechne_zustaende()
+                
+                # Echte Degradationslimits für ORC-Fluide
+                degradation_limits = {
+                    "Toluene": 400.0,
+                    "MM": 350.0,
+                    "MDM": 350.0,
+                    "D4": 350.0,
+                    "D5": 350.0,
+                    "CycloPentane": 300.0,
+                    "Ethanol": 300.0,
+                    "Isopentane": 280.0,
+                    "n-Pentane": 280.0,
+                    "IsoButane": 250.0,
+                    "n-Butane": 250.0,
+                    "Propane": 250.0,
+                    "R245fa": 250.0,
+                    "Ammonia": 400.0,
+                    "R134a": 150.0,
+                    "R1234yf": 150.0
+                }
+                
+                if gud_fluid != "Water":
+                    limit = degradation_limits.get(gud_fluid, 250.0)
+                    if T_max_dampf > limit:
+                        st.warning(f"**Thermische Zersetzung:** Das gewählte Fluid ({selected_gud_fluid_display}) hat ein Degradationslimit von ca. **{limit} °C**. Die berechnete Temperatur von **{T_max_dampf:.0f} °C** würde zur chemischen Zersetzung im Wärmetauscher führen! Das Modell rechnet theoretisch weiter, ist aber praktisch nicht baubar.")
+
+                Q_dot_abgas_kW = m_dot_gas * (cp/1000) * ((T4 - 273.15) - t_kamin)
+
+                m_dot_dampf = Q_dot_abgas_kW / gud_dampf.q_zu
+
+                gud_dampf.m_dot = m_dot_dampf
+                gud_dampf.berechne_zustaende()
+
+                P_netto_gesamt = P_tT_real - P_tV_real + (gud_dampf.leistung_turbine - gud_dampf.leistung_pumpe)
+                eta_gesamt = P_netto_gesamt / Q_zu_Brennkammer
+                
+            except Exception as e:
+                st.error("Fehler in der Dampf-Berechnung. Möglicherweise Kesseldruck zu hoch für diese Gastemperatur.")
+                gud_error = True
+
+    # Ergebnisse anzeigen
+    fluid_title = "Luft (variabel)" if var_cp_mode else fluid_name.split()[0]
+    st.subheader(f"Reale Ergebnisse für {fluid_title} {'mit GuD-Dampfprozess' if has_gud and not gud_error else ''}")
+    
+    if w_net_real < 0:
+        st.error("Achtung: Der Verdichter verbraucht mehr Leistung als die Gasturbine liefert. Die Anlage ist nicht lauffähig!")
+    else:
+        if has_gud and not gud_error:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric(
+                r"Gesamt-Wirkungsgrad $\eta_{GuD}$", f"{eta_gesamt * 100:.2f} %", 
+                help="**Gesamtwirkungsgrad des GuD-Kraftwerks**\n\n$\\eta_{GuD} = \\frac{P_{netto, gesamt}}{\\dot{Q}_{zu, Brennkammer}}$\n\nBeinhaltet die Nettoleistung beider Turbinen bezogen auf die primäre Wärmezufuhr in der Brennkammer der Gasturbine."
+            )
+            c2.metric(
+                r"Netto-Leistung $P_{net}$", f"{P_netto_gesamt:.0f} kW",
+                help="**Gesamte Nettoleistung**\n\nSumme der abgegebenen Wellenleistung aus Gasturbine und Dampfturbine abzüglich der Verdichter- und Pumpenarbeit."
+            )
+            c3.metric(
+                r"Dampf-Massenstrom $\dot{m}_{D}$", f"{m_dot_dampf:.2f} kg/s",
+                help="**Dampfmassenstrom**\n\nDer Massenstrom an Dampf, der mit der verfügbaren Abwärme der Gasturbine im Abhitzedampferzeuger erzeugt werden kann."
+            )
+            c4.metric(
+                r"Massenstrom-Verhältnis $\dot{m}_D/\dot{m}_G$", f"{m_dot_dampf/m_dot_gas:.3f}",
+                help="**Massenstrom-Verhältnis**\n\nVerhältnis des erzeugten Dampfes zum primär eingesetzten Gasturbinen-Massenstrom."
+            )
+            
+            st.caption("Teilleistungen:")
+            c5, c6, c7, c8 = st.columns(4)
+            c5.metric("Gasturbine $P_{T,G}$", f"{P_tT_real:.0f} kW", help="Von der Gasturbine generierte Bruttoleistung.")
+            c6.metric("Gasverdichter $P_{V,G}$", f"{-P_tV_real:.0f} kW", help="Eigenbedarf des Luftkompressors.")
+            c7.metric("Dampfturbine $P_{T,D}$", f"{gud_dampf.leistung_turbine:.0f} kW", help="Von der Dampfturbine generierte Bruttoleistung.")
+            c8.metric("Speisewasserpumpe $P_{P,D}$", f"{-gud_dampf.leistung_pumpe:.0f} kW", help="Eigenbedarf der Wasserpumpe.")
+            
+        else:
+            col1, col2, col3, col4, col5 = st.columns(5)
+            col1.metric(
+                r"Wirkungsgrad $\eta_{th}$", f"{eta_th_real * 100:.2f} %",
+                help="**Thermischer Wirkungsgrad**\n\n$\\eta_{th} = \\frac{w_{net}}{q_{zu}}$\n\nAnteil der in der Brennkammer zugeführten Wärme, der in nutzbare mechanische Energie (Welle) umgewandelt wird."
+            )
+            col2.metric(
+                r"Spez. Arbeit $w_{net}$", f"{w_net_real:.2f} kJ/kg",
+                help="**Spezifische Nettoarbeit**\n\n$w_{net} = |w_T| - |w_V|$\n\nDie Energieausbeute pro kg Gas. Bei Gasturbinen merklich geringer als beim Dampfkraftwerk, da der Gas-Verdichter viel Leistung benötigt."
+            )
+            col3.metric(
+                r"Arbeitsverh. $\omega$", f"{omega_real:.2f}",
+                help="**Arbeitsverhältnis**\n\n$\\omega = \\frac{w_{net}}{w_T}$\n\nGibt an, welcher Bruchteil der Turbinenleistung nach Abzug des Eigenbedarfs (Verdichter) noch als effektive Nutzleistung für den Generator übrig bleibt."
+            )
+            col4.metric(
+                r"Turbine $P_T$", f"{P_tT_real:.0f} kW",
+                help="**Brutto-Turbinenleistung**\n\nDie gesamte von der Turbine erzeugte mechanische Leistung (Expansion aus dem Heißgas)."
+            )
+            col5.metric(
+                r"Verdichter $P_V$", f"{-P_tV_real:.0f} kW",
+                help="**Verdichterleistung (Eigenbedarf)**\n\nDer Leistungsbedarf des Luft-Kompressors. Wird in der Praxis direkt über dieselbe Welle von der Turbine angetrieben."
+            )
+
+    # Anlagenschema
+    try:
+        if has_gud and not gud_error:
+            with open("GuD-Prozess.svg", "r", encoding="utf-8") as file:
+                svg_code = file.read()
+
+            svg_code = svg_code.replace("{T1}", f"{T1-273.15:.1f}")
+            svg_code = svg_code.replace("{p1}", f"{p1/100000:.2f}")
+            
+            svg_code = svg_code.replace("{T2}", f"{T2-273.15:.1f}")
+            svg_code = svg_code.replace("{p2}", f"{p2/100000:.2f}")
+            
+            svg_code = svg_code.replace("{T3}", f"{T3-273.15:.1f}")
+            svg_code = svg_code.replace("{p3}", f"{p3/100000:.2f}")
+            
+            svg_code = svg_code.replace("{T4}", f"{T4-273.15:.1f}")
+            svg_code = svg_code.replace("{p4}", f"{p4/100000:.2f}")
+
+            mapping_dampf = {
+                '1': 5,
+                '2': 6,
+                '3': 7,
+                '4': 8
+            }
+            
+            for rankine_pt, svg_pt in mapping_dampf.items():
+                if rankine_pt in gud_dampf.zustand:
+                    T_d = gud_dampf.zustand[rankine_pt]['T'] - 273.15
+                    p_d = gud_dampf.zustand[rankine_pt]['p'] / 100000
+                    h_d = gud_dampf.zustand[rankine_pt]['h'] / 1000
+                    
+                    svg_code = svg_code.replace(f"{{T{svg_pt}}}", f"{T_d:.1f}")
+                    svg_code = svg_code.replace(f"{{p{svg_pt}}}", f"{p_d:.2f}")
+                    svg_code = svg_code.replace(f"{{h{svg_pt}}}", f"{h_d:.1f}")
+                
+        else:
+            with open("Joule-Prozess.svg", "r", encoding="utf-8") as file:
+                svg_code = file.read()
+                
+            svg_code = svg_code.replace("{T1}", f"{T1-273.15:.1f}")
+            svg_code = svg_code.replace("{p1}", f"{p1/100000:.2f}")
+            svg_code = svg_code.replace("{T2}", f"{T2-273.15:.1f}")
+            svg_code = svg_code.replace("{p2}", f"{p2/100000:.2f}")
+            svg_code = svg_code.replace("{T3}", f"{T3-273.15:.1f}")
+            svg_code = svg_code.replace("{p3}", f"{p3/100000:.2f}")
+            svg_code = svg_code.replace("{T4}", f"{T4-273.15:.1f}")
+            svg_code = svg_code.replace("{p4}", f"{p4/100000:.2f}")
+
+        svg_code = apply_theme_to_svg(svg_code)
+        st.subheader("Anlagenschema")
+        st.markdown(f'<div style="display:flex; justify-content:center; width: 100%;">{svg_code}</div>', unsafe_allow_html=True)
+        
+    except FileNotFoundError:
+        st.warning(f"Das Bild '{'GuD-Prozess.svg' if has_gud else 'Joule-Prozess.svg'}' fehlt noch im Ordner.")
+
+    # Diagramme (Joule / GuD)
     def calc_s(T, p):
         return (cp * np.log(T / T1) - R_i * np.log(p / p1)) / 1000
         
@@ -741,90 +966,31 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     s4 = calc_s(T4, p4)
     
     T_2s3 = np.linspace(T2s, T3, 50)
-    s_2s3 = [calc_s(T, p2) for T in T_2s3]
-    
+    s_2s3 = [calc_s(T_v, p2) for T_v in T_2s3]
     T_23 = np.linspace(T2, T3, 50)
-    s_23 = [calc_s(T, p2) for T in T_23]
-    
+    s_23 = [calc_s(T_v, p2) for T_v in T_23]
     T_4s1 = np.linspace(T4s, T1, 50)
-    s_4s1 = [calc_s(T, p1) for T in T_4s1]
-    
+    s_4s1 = [calc_s(T_v, p1) for T_v in T_4s1]
     T_41 = np.linspace(T4, T1, 50)
-    s_41 = [calc_s(T, p1) for T in T_41]
-    
-    fluid_title = "Luft (variabel)" if var_cp_mode else fluid_name.split()[0]
-    st.subheader(f"Reale Ergebnisse für {fluid_title}")
-    
-    if w_net_real < 0:
-        st.error("Achtung: Der Verdichter verbraucht mehr Leistung als die Turbine liefert. Die Anlage ist nicht lauffähig!")
-    else:
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric(
-            r"Wirkungsgrad $\eta_{th}$", f"{eta_th_real * 100:.2f} %",
-            help="**Thermischer Wirkungsgrad**\n\n$\\eta_{th} = \\frac{w_{net}}{q_{zu}}$\n\nAnteil der in der Brennkammer zugeführten Wärme, der in nutzbare mechanische Energie (Welle) umgewandelt wird."
-        )
-        col2.metric(
-            r"Spez. Arbeit $w_{net}$", f"{w_net_real:.2f} kJ/kg",
-            help="**Spezifische Nettoarbeit**\n\n$w_{net} = |w_T| - |w_V|$\n\nDie Energieausbeute pro kg Gas. Bei Gasturbinen merklich geringer als beim Dampfkraftwerk, da der Gas-Verdichter extrem viel Leistung schluckt."
-        )
-        col3.metric(
-            r"Arbeitsverh. $\omega$", f"{omega_real:.2f}",
-            help="**Arbeitsverhältnis**\n\n$\\omega = \\frac{w_{net}}{w_T}$\n\nGibt an, welcher Bruchteil der Turbinenleistung nach Abzug des Eigenbedarfs (Verdichter) noch als effektive Nutzleistung für den Generator übrig bleibt."
-        )
-        col4.metric(
-            r"Turbine $P_T$", f"{P_tT_real:.0f} kW",
-            help="**Brutto-Turbinenleistung**\n\nDie gesamte von der Turbine erzeugte Leistung (Expansion aus dem Heißgas)."
-        )
-        col5.metric(
-            r"Verdichter $P_V$", f"{P_tV_real:.0f} kW",
-            help="**Verdichterleistung (Eigenbedarf)**\n\nDer Leistungsbedarf des Luft-Kompressors. Wird in der Praxis direkt über dieselbe Welle von der Turbine angetrieben."
-        )
+    s_41 = [calc_s(T_v, p1) for T_v in T_41]
 
-    # Schema Joule-Prozess
-    try:
-        with open("Joule-Prozess.svg", "r", encoding="utf-8") as file:
-            svg_code = file.read()
-
-        svg_code = svg_code.replace("{T1}", f"{T1-273.15:.1f}")
-        svg_code = svg_code.replace("{p1}", f"{p1/100000:.2f}")
-
-        svg_code = svg_code.replace("{T2}", f"{T2-273.15:.1f}")
-        svg_code = svg_code.replace("{p2}", f"{p2/100000:.2f}")
-
-        svg_code = svg_code.replace("{T3}", f"{T3-273.15:.1f}")
-        svg_code = svg_code.replace("{p3}", f"{p3/100000:.2f}")
-
-        svg_code = svg_code.replace("{T4}", f"{T4-273.15:.1f}")
-        svg_code = svg_code.replace("{p4}", f"{p4/100000:.2f}")
-
-        svg_code = apply_theme_to_svg(svg_code)
-
-        st.subheader("Anlagenschema")
-        st.markdown(
-            f'<div style="display:flex; justify-content:center; width: 100%;">{svg_code}</div>',
-            unsafe_allow_html=True
-        )
-        
-    except FileNotFoundError:
-        st.warning("Das Bild 'Joule-Prozess.svg' fehlt noch im Ordner.")
-
-    fig = make_subplots(
+    fig_joule = make_subplots(
         rows=2, cols=1, 
         shared_xaxes=False, vertical_spacing=0.1,
         specs=[[{"type": "scatter"}], [{"type": "table"}]], row_heights=[0.75, 0.25]
     )
     
-    fig.add_trace(go.Scatter(x=[s1, s2s], y=[T1-273.15, T2s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal (Isentrop)'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=s_2s3, y=T_2s3-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=[s3, s4s], y=[T3-273.15, T4s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=s_4s1, y=T_4s1-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=[s1, s2s], y=[T1-273.15, T2s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal (Isentrop)'), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=s_2s3, y=T_2s3-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=[s3, s4s], y=[T3-273.15, T4s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=s_4s1, y=T_4s1-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
     
-    fig.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Real (Irreversibel)'), row=1, col=1)
-    fig.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Real (Irreversibel)'), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
     
-    fig.add_trace(go.Scatter(
+    fig_joule.add_trace(go.Scatter(
         x=[s1, s2s, s2, s3, s4s, s4], y=[T1-273.15, T2s-273.15, T2-273.15, T3-273.15, T4s-273.15, T4-273.15],
         mode='markers+text',
         marker=dict(size=10, color='white', line=dict(width=2, color=['#0068C9', '#888888', '#0068C9', '#0068C9', '#888888', '#0068C9'])),
@@ -833,7 +999,7 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         showlegend=False
     ), row=1, col=1)
     
-    fig.add_trace(go.Table(
+    fig_joule.add_trace(go.Table(
         header=dict(
             values=["<b>Punkt</b>", "<b>Druck <i>p</i> (bar)</b>", "<b>Temp. <i>T</i> (°C)</b>", "<b>Entropie <i>s</i> (kJ/(kg K))</b>"],
             font=dict(size=14, color='white'), align="left", fill_color='#0068C9', line=dict(color='#E0E0E0', width=1)
@@ -849,32 +1015,133 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         )
     ), row=2, col=1)
     
-    fig.update_layout(
+    fig_joule.update_layout(
         xaxis_title="Spezifische Entropie <i>s</i> in kJ/(kg K)",
         yaxis_title="Temperatur <i>T</i> in °C",
         height=850, hovermode="closest", margin=dict(l=40, r=40, t=40, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+
+    if has_gud and not gud_error:
+        st.subheader("Thermodynamische Kopplung")
+        tab_tq, tab_ts_gas, tab_ts_dampf = st.tabs(["Wärmeübertragungsdiagramm (T-Q)", "T-s Diagramm (Gasturbine)", "T-s Diagramm (Dampfkraft)"])
+        
+        with tab_tq:
+            st.info("**Das T-$\dot{Q}$-Diagramm (Wärmeübertragungsdiagramm)** veranschaulicht den Energieaustausch im Abhitzedampferzeuger. Die **rote Linie** zeigt das abkühlende Abgas der Gasturbine. Die **blaue Linie** repräsentiert das Wasser/ORC-Fluid, welches vorwärmt, verdampft (waagerechtes Plateau) und überhitzt. Der **Pinch-Point** ist der Flaschenhals der Wärmeübertragung: Die engste Stelle zwischen beiden Linien, an der die Grädigkeit minimal wird.")
+
+            T_d_1 = gud_dampf.zustand['1']['T'] - 273.15 # Frischdampf
+            h_d_1 = gud_dampf.zustand['1']['h'] / 1000
+            
+            T_d_4 = gud_dampf.zustand['4']['T'] - 273.15 # Speisewasser
+            h_d_4 = gud_dampf.zustand['4']['h'] / 1000
+
+            T_sat = CP.PropsSI('T', 'P', gud_dampf.p_kessel, 'Q', 0, gud_fluid) - 273.15
+            h_sat_L = CP.PropsSI('H', 'P', gud_dampf.p_kessel, 'Q', 0, gud_fluid) / 1000
+            h_sat_V = CP.PropsSI('H', 'P', gud_dampf.p_kessel, 'Q', 1, gud_fluid) / 1000
+
+            Q_dot_ueh = m_dot_dampf * (h_d_1 - h_sat_V) # Überhitzer
+            Q_dot_vd = m_dot_dampf * (h_sat_V - h_sat_L) # Verdampfer
+            Q_dot_eco = m_dot_dampf * (h_sat_L - h_d_4) # Economizer (Vorwärmer)
+            
+            Q_kum_0 = 0.0
+            Q_kum_1 = Q_dot_ueh
+            Q_kum_2 = Q_dot_ueh + Q_dot_vd
+            Q_kum_3 = Q_dot_ueh + Q_dot_vd + Q_dot_eco # Gesamt
+
+            T_g_0 = T4 - 273.15
+            T_g_3 = t_kamin
+
+            fig_tq = go.Figure()
+
+            fig_tq.add_trace(go.Scatter(
+                x=[Q_kum_0, Q_kum_3], y=[T_g_0, T_g_3],
+                mode='lines+markers', line=dict(color='#FF4B4B', width=3), 
+                name='Abgas (Wärmequelle)'
+            ))
+
+            fig_tq.add_trace(go.Scatter(
+                x=[Q_kum_0, Q_kum_1, Q_kum_2, Q_kum_3], 
+                y=[T_d_1, T_sat, T_sat, T_d_4],
+                mode='lines+markers', line=dict(color='#0068C9', width=3), 
+                name='Wasser/Dampf (Wärmesenke)'
+            ))
+
+            fig_tq.add_annotation(
+                x=Q_kum_1, y=T_sat,
+                text=f"Pinch Point",
+                showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#333",
+                ax=0, ay=40, font=dict(size=12)
+            )
+
+            fig_tq.update_layout(
+                xaxis_title="Übertragene Wärmeleistung <i>Q̇</i> in kW",
+                yaxis_title="Temperatur <i>T</i> in °C",
+                height=550, margin=dict(l=40, r=40, t=40, b=40),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_tq, use_container_width=True, theme="streamlit")
+            
+        with tab_ts_gas:
+            st.plotly_chart(fig_joule, use_container_width=True, theme="streamlit")
+            
+        with tab_ts_dampf:
+            s_g_d, T_g_d = gud_dampf.get_saettigungslinie() 
+            s_ideal_d, T_ideal_d = gud_dampf.get_plot_daten_ideal()
+            s_real_d, T_real_d = gud_dampf.get_plot_daten_real()
+            s_eck_d, t_eck_d, hover_texte_d, pt_keys_d = gud_dampf.get_eckpunkte_daten()
+            
+            fig_dampf = go.Figure()
+            fig_dampf.add_trace(go.Scatter(x=s_g_d, y=T_g_d, mode='lines', line=dict(color='#333333', width=2), name='Nassdampfgebiet'))
+            fig_dampf.add_trace(go.Scatter(x=s_ideal_d, y=T_ideal_d, mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal'))
+            fig_dampf.add_trace(go.Scatter(x=s_real_d, y=T_real_d, mode='lines', line=dict(color='#0068C9', width=3), name='Real'))
+            
+            formatted_keys = [k.replace('s', '<sub>s</sub>') for k in pt_keys_d]
+            mapped_keys = [k.replace('1', '5').replace('2', '6').replace('3', '7').replace('4', '8') for k in formatted_keys]
+            
+            fig_dampf.add_trace(go.Scatter(
+                x=s_eck_d, y=t_eck_d, mode='markers+text',
+                marker=dict(size=10, color='white', line=dict(width=2, color='#0068C9')),
+                text=mapped_keys, textposition="top right", hoverinfo="text", hovertext=hover_texte_d, showlegend=False
+            ))
+            
+            fig_dampf.update_layout(
+                xaxis_title="Spezifische Entropie <i>s</i> in kJ/(kg K)",
+                yaxis_title="Temperatur <i>T</i> in °C",
+                height=550, margin=dict(l=40, r=40, t=40, b=40),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_dampf, use_container_width=True, theme="streamlit")
+            
+    else:
+        st.subheader("Thermodynamik")
+        st.plotly_chart(fig_joule, use_container_width=True, theme="streamlit")
 
 
-# 4. KÄLTEANLAGEN
+# 4. Kälteanlagen
 elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
     st.title("Kompressionskälteanlage")
     st.write("Thermodynamische Auslegung und Analyse von Kältekreisläufen.")
     
     st.sidebar.header("1. Anlagenaufbau")
-    is_2stage = st.sidebar.toggle("Zweistufige Verdichtung", value=False)
+    is_2stage = st.sidebar.toggle(
+        "Zweistufige Verdichtung", value=False,
+        help="Aktiviert eine zweistufige Kompression. Verbessert bei großen Temperaturhüben den thermodynamischen Wirkungsgrad erheblich und reduziert die thermische Belastung der Verdichter (Heißgastemperatur)."
+    )
     
-    has_mdf = st.sidebar.checkbox("Mitteldruckflasche (MDF)", value=is_2stage, disabled=not is_2stage)
+    has_mdf = st.sidebar.checkbox(
+        "Mitteldruckflasche (MDF)", value=is_2stage, disabled=not is_2stage,
+        help="Fügt eine Mitteldruckflasche (Economizer) zur Trennung von Flashgas und zur Flüssigkeitsunterkühlung hinzu. Nur bei zweistufigen Anlagen möglich."
+    )
     if has_mdf:
         mdf_auswahl = st.sidebar.radio("Verschaltung MDF", ["Partiell (Flashgas-Bypass)", "Vollständig (Quenchen)"], label_visibility="collapsed")
         mdf_mode_key = "partiell" if "Partiell" in mdf_auswahl else "vollstaendig"
     else:
         mdf_mode_key = "partiell"
         
-    has_zk = st.sidebar.checkbox("Äußere Zwischenkühlung (ZK)", disabled=not is_2stage)
+    has_zk = st.sidebar.checkbox(
+        "Äußere Zwischenkühlung (ZK)", disabled=not is_2stage,
+        help="Kühlt das Heißgas nach dem Niederdruckverdichter extern (z. B. durch Kühlwasser) ab, um die Arbeit des nachfolgenden Hochdruckverdichters zu minimieren."
+    )
     
     if not is_2stage:
         has_mdf = False
