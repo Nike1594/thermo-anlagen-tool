@@ -21,6 +21,10 @@ Das Tool umfasst aktuell drei Simulationsmodule:
     *   Integration einer optionalen Zwischenüberhitzung inkl. Parameterstudie zur Vermeidung von Tropfenschlag.
 *   **Joule-Prozess (Gasturbine)**
     *   Auslegung offener Gasturbinen mit verschiedenen Arbeitsfluiden (Luft, Helium, Argon, CO2).
+    **GuD-Kombikraftwerk (Gas-und-Dampf)**
+    * Prozesskopplung: Verschaltung von Gasturbine (Joule) und nachgeschaltetem Dampf-/ORC-Kreisprozess (Clausius-Rankine) über einen Abhitzedampferzeuger (AHDE).
+    * Exergie-Analyse: Detaillierte Betrachtung der Entropieproduktion und Exergieverluste bei unterschiedlichen Pinch-Point-Auslegungen im interaktiven T-$\dot{Q}$-Diagramm.
+    * Anlagen-Sicherheit: Automatische Warnungen vor Säuretaupunkt-Unterschreitungen im Kaminabgas sowie Tropfenschlagerosion (mit zuschaltbarer Zwischenüberhitzung).
 *   **Kompressionskälteanlagen & Wärmepumpen**
     *   Einstufige und zweistufige Verdichtungsprozesse.
     *   Schaltungsvarianten: Mitteldruckflasche (partiell/quenchen) und äußere Zwischenkühlung.
