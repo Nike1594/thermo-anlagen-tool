@@ -457,7 +457,8 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             pi = cr_prozess.pi
             tau = cr_prozess.tau
             
-            st.subheader(f"Reale Ergebnisse für {selected_orc_display}")
+            st.subheader(f"Berechnete Anlagenleistung für {selected_orc_display}")
+            st.caption("Unter Berücksichtigung der irreversiblen Verdichtungs- und Entspannungsverluste")
             
             col1, col2, col3, col4 = st.columns(4)
             col1.metric(
@@ -491,6 +492,8 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                 help=r"**Pumpenleistung (Eigenbedarf)**" + "\n\n" + r"$P_P = \dot{m} \cdot w_P > 0$" + "\n\n" + "Leistungsbedarf zur Förderung des Fluids auf Kesseldruck.\n\nDas Vorzeichen ist positiv, da der Pumpe Leistung zugeführt werden muss."
             )
             
+            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die rote Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
+
             fig = make_subplots(
                 rows=2, cols=1, 
                 shared_xaxes=False, vertical_spacing=0.1,
@@ -577,7 +580,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             fig.add_trace(go.Scatter(x=s_ideal, y=T_ideal, mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal (Isentrop)'), row=1, col=1)
             
             s_real, T_real = cr_prozess.get_plot_daten_real()
-            fig.add_trace(go.Scatter(x=s_real, y=T_real, mode='lines', line=dict(color='#FF4B4B', width=3), name='Real (Irreversibel)'), row=1, col=1)
+            fig.add_trace(go.Scatter(x=s_real, y=T_real, mode='lines', line=dict(color='#FF4B4B', width=3), name='Irreversibel'), row=1, col=1)
             
             s_eck, t_eck, hover_texte, pt_keys = cr_prozess.get_eckpunkte_daten()
             marker_colors = ['#888888' if 's' in k else '#FF4B4B' for k in pt_keys]
@@ -822,7 +825,8 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     Q_zu_Brennkammer = m_dot_gas * q_zu_real
 
     fluid_title = "Luft (variabel)" if var_cp_mode else fluid_name.split()[0]
-    st.subheader(f"Reale Ergebnisse für {fluid_title}")
+    st.subheader(f"Berechnete Anlagenleistung für {fluid_title}")
+    st.caption("Vergleich: Idealer (isentroper) vs. irreversibler Prozessverlauf")
     
     if w_net_real < 0:
         st.error("Achtung: Der Verdichter verbraucht mehr Leistung als die Gasturbine liefert. Die Anlage ist nicht lauffähig!")
@@ -883,6 +887,8 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     T_41 = np.linspace(T4, T1, 50)
     s_41 = [calc_s(T_v, p1) for T_v in T_41]
 
+    st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die blaue Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
+
     fig_joule = make_subplots(rows=2, cols=1, shared_xaxes=False, vertical_spacing=0.1, specs=[[{"type": "scatter"}], [{"type": "table"}]], row_heights=[0.65, 0.35])
     
     fig_joule.add_trace(go.Scatter(x=[s1, s2s], y=[T1-273.15, T2s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal'), row=1, col=1)
@@ -890,7 +896,7 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     fig_joule.add_trace(go.Scatter(x=[s3, s4s], y=[T3-273.15, T4s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
     fig_joule.add_trace(go.Scatter(x=s_4s1, y=T_4s1-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
     
-    fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Real'), row=1, col=1)
+    fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'), row=1, col=1)
     fig_joule.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
     fig_joule.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
     fig_joule.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
@@ -905,7 +911,7 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
         header=dict(values=["<b>Punkt</b>", "<b>Druck <i>p</i> (bar)</b>", "<b>Temp. <i>T</i> (°C)</b>", "<b>Entropie <i>s</i> (kJ/(kg K))</b>"], font=dict(size=14, color='white'), align="left", fill_color='#0068C9', line=dict(color='#E0E0E0', width=1)),
         cells=dict(
             values=[
-                ["1 (Ansaugung)", "2<sub>s</sub> (Ideal Verdichtet)", "2 (Real Verdichtet)", "3 (Turbineneintritt)", "4<sub>s</sub> (Ideal Entspannt)", "4 (Real Entspannt)"],
+                ["1 (Ansaugung)", "2<sub>s</sub> (Ideal/Isentrop)", "2 (Irreversibel)", "3 (Turbineneintritt)", "4<sub>s</sub> (Ideal/Isentrop)", "4 (Irreversibel)"],
                 [f"{p1/100000:.2f}", f"{p2/100000:.2f}", f"{p2/100000:.2f}", f"{p3/100000:.2f}", f"{p4/100000:.2f}", f"{p4/100000:.2f}"],
                 [f"{T1-273.15:.2f}", f"{T2s-273.15:.2f}", f"{T2-273.15:.2f}", f"{T3-273.15:.2f}", f"{T4s-273.15:.2f}", f"{T4-273.15:.2f}"],
                 [f"{s1:.4f}", f"{s2s:.4f}", f"{s2:.4f}", f"{s3:.4f}", f"{s4s:.4f}", f"{s4:.4f}"]
@@ -1110,7 +1116,8 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     # Ergebnisse
     if not gud_error:
         fluid_title = "Luft (variabel)" if var_cp_mode else fluid_name.split()[0]
-        st.subheader(f"Reale Ergebnisse für GuD mit {fluid_title} und {selected_gud_fluid_display}")
+        st.subheader(f"Berechnete Anlagenleistung für GuD mit {fluid_title} und {selected_gud_fluid_display}")
+        st.caption("Unter Berücksichtigung der irreversiblen Verdichtungs- und Entspannungsverluste")
         
         c1, c2, c3, c4 = st.columns(4)
         c1.metric(r"Gesamt-Wirkungsgrad $\eta_{GuD}$", f"{eta_gesamt * 100:.2f} %")
@@ -1206,7 +1213,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
         fig_joule.add_trace(go.Scatter(x=s_2s3, y=T_2s3-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=[s3, s4s], y=[T3-273.15, T4s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=s_4s1, y=T_4s1-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
-        fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Real'), row=1, col=1)
+        fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
@@ -1220,7 +1227,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             header=dict(values=["<b>Punkt</b>", "<b>Druck <i>p</i> (bar)</b>", "<b>Temp. <i>T</i> (°C)</b>", "<b>Entropie <i>s</i> (kJ/(kg K))</b>"], font=dict(size=14, color='white'), align="left", fill_color='#0068C9', line=dict(color='#E0E0E0', width=1)),
             cells=dict(
                 values=[
-                    ["1 (Ansaugung)", "2<sub>s</sub> (Ideal Verdichtet)", "2 (Real Verdichtet)", "3 (Turbineneintritt)", "4<sub>s</sub> (Ideal Entspannt)", "4 (Real Entspannt)"],
+                    ["1 (Ansaugung)", "2<sub>s</sub> (Ideal/Isentrop)", "2 (Irreversibel)", "3 (Turbineneintritt)", "4<sub>s</sub> (Ideal/Isentrop)", "4 (Irreversibel)"],
                     [f"{p1/100000:.2f}", f"{p2/100000:.2f}", f"{p2/100000:.2f}", f"{p3/100000:.2f}", f"{p4/100000:.2f}", f"{p4/100000:.2f}"],
                     [f"{T1-273.15:.2f}", f"{T2s-273.15:.2f}", f"{T2-273.15:.2f}", f"{T3-273.15:.2f}", f"{T4s-273.15:.2f}", f"{T4-273.15:.2f}"],
                     [f"{s1:.4f}", f"{s2s:.4f}", f"{s2:.4f}", f"{s3:.4f}", f"{s4s:.4f}", f"{s4:.4f}"]
@@ -1332,9 +1339,11 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
                 e3.metric("Einsparpotenzial", f"{E_v_real - E_v_min:.1f} kW", help="Exergie, die durch Reduzierung des Pinch-Points noch in nutzbare Arbeit gewandelt werden könnte.")
             
         with tab_ts_gas:
+            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die blaue Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
             st.plotly_chart(fig_joule, use_container_width=True, theme="streamlit")
             
         with tab_ts_dampf:
+            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die blaue Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
             s_g_d, T_g_d = gud_dampf.get_saettigungslinie() 
             s_ideal_d, T_ideal_d = gud_dampf.get_plot_daten_ideal()
             s_real_d, T_real_d = gud_dampf.get_plot_daten_real()
@@ -1343,7 +1352,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             fig_dampf = go.Figure()
             fig_dampf.add_trace(go.Scatter(x=s_g_d, y=T_g_d, mode='lines', line=dict(color='#333333', width=2), name='Nassdampfgebiet'))
             fig_dampf.add_trace(go.Scatter(x=s_ideal_d, y=T_ideal_d, mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal'))
-            fig_dampf.add_trace(go.Scatter(x=s_real_d, y=T_real_d, mode='lines', line=dict(color='#0068C9', width=3), name='Real'))
+            fig_dampf.add_trace(go.Scatter(x=s_real_d, y=T_real_d, mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'))
             
             formatted_keys = [k.replace('s', '<sub>s</sub>').replace('z', '<sub>z</sub>') for k in pt_keys_d]
             
@@ -1740,34 +1749,6 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                 st.markdown(f'<div style="display:flex; justify-content:center; width: 100%;">{svg_code}</div>', unsafe_allow_html=True)
             except FileNotFoundError:
                 st.warning("Das Bild 'Kaelte_2_stufig_mdf_vollstaendig.svg' fehlt noch im Ordner.")
-        elif not has_mdf and has_zk:
-            try:
-                with open("Kaelte_2_stufig_zk.svg", "r", encoding="utf-8") as file:
-                    svg_code = file.read()
-
-                mapping = {
-                    1: '1',
-                    2: '2',
-                    3: '3',
-                    4: '4',
-                    5: '5',
-                    6: '9'
-                }
-                
-                for svg_idx, backend_idx in mapping.items():
-                    if backend_idx in kaelte_prozess.zustand:
-                        T = kaelte_prozess.zustand[backend_idx]['T'] - 273.15
-                        p = kaelte_prozess.zustand[backend_idx]['p'] / 100000
-                        h = kaelte_prozess.zustand[backend_idx]['h'] / 1000
-                        
-                        svg_code = svg_code.replace(f"{{T{svg_idx}}}", f"{T:.1f}")
-                        svg_code = svg_code.replace(f"{{p{svg_idx}}}", f"{p:.2f}")
-                        svg_code = svg_code.replace(f"{{h{svg_idx}}}", f"{h:.1f}")
-                
-                svg_code = apply_theme_to_svg(svg_code)
-                st.markdown(f'<div style="display:flex; justify-content:center; width: 100%;">{svg_code}</div>', unsafe_allow_html=True)
-            except FileNotFoundError:
-                st.warning("Das Bild 'Kaelte_2_stufig_zk.svg' fehlt noch im Ordner.")
         elif has_mdf and mdf_mode_key == "vollstaendig" and has_zk:
             try:
                 with open("Kaelte_2_stufig_mdf_vollstaendig_zk.svg", "r", encoding="utf-8") as file:
@@ -1815,7 +1796,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
             fig_ph = go.Figure()
             fig_ph.add_trace(go.Scatter(x=h_g, y=p_g, mode='lines', line=dict(color='#333333', width=2), name='Nassdampfgebiet'))
             fig_ph.add_trace(go.Scatter(x=h_id, y=p_id, mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal (Isentrop)'))
-            fig_ph.add_trace(go.Scatter(x=h_re, y=p_re, mode='lines', line=dict(color='#0068C9', width=3), name='Real (Irreversibel)'))
+            fig_ph.add_trace(go.Scatter(x=h_re, y=p_re, mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'))
             fig_ph.add_trace(go.Scatter(
                 x=h_pts, y=p_pts, mode='markers+text',
                 marker=dict(size=10, color='white', line=dict(width=2, color=marker_colors)),
@@ -1833,10 +1814,11 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
             st.plotly_chart(fig_ph, use_container_width=True, theme="streamlit")
             
         with tab_ts:
+            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie zeigt den verlustfreien (isentropen) Vergleichsprozess. Die blaue Linie repräsentiert den irreversiblen Prozess, bei dem sich das Heißgas durch Reibungsverluste im Verdichter zusätzlich erwärmt (Entropiezunahme nach rechts).")
             fig_ts = go.Figure()
             fig_ts.add_trace(go.Scatter(x=s_g, y=T_g, mode='lines', line=dict(color='#333333', width=2), name='Nassdampfgebiet'))
             fig_ts.add_trace(go.Scatter(x=s_id, y=T_id, mode='lines', line=dict(color='#888888', width=2, dash='dash'), name='Ideal (Isentrop)'))
-            fig_ts.add_trace(go.Scatter(x=s_re, y=T_re, mode='lines', line=dict(color='#0068C9', width=3), name='Real (Irreversibel)'))
+            fig_ts.add_trace(go.Scatter(x=s_re, y=T_re, mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'))
             fig_ts.add_trace(go.Scatter(
                 x=s_pts, y=T_pts, mode='markers+text',
                 marker=dict(size=10, color='white', line=dict(width=2, color=marker_colors)),
