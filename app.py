@@ -989,9 +989,11 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     selected_gud_fluid_display = st.sidebar.selectbox("Arbeitsfluid (Dampf)", list(orc_mapping_gud.keys()), index=0)
     gud_fluid = orc_mapping_gud[selected_gud_fluid_display]
     
+    st.sidebar.markdown("**Verdampfung (Kessel)**")
     create_synced_input("Kesseldruck $p_{kessel}$ (bar)", "gud_p_kessel", 1.0, 200.0, 5.0)
     p_kessel = st.session_state.gud_p_kessel_input
     
+    st.sidebar.markdown("**Kondensation**")
     gud_kond_mode = st.sidebar.radio("Modus Kondensation Dampf", ["Druck (bar)", "Temperatur (°C)"], horizontal=True, label_visibility="collapsed")
     if gud_kond_mode == "Temperatur (°C)":
         create_synced_input("Kondensationstemp. $T_{kond}$ (°C)", "gud_T1", 10.0, 150.0, 1.0)
@@ -1208,18 +1210,18 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
         fig_joule.add_trace(go.Scatter(x=s_2s3, y=T_2s3-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=[s3, s4s], y=[T3-273.15, T4s-273.15], mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(x=s_4s1, y=T_4s1-273.15, mode='lines', line=dict(color='#888888', width=2, dash='dash'), showlegend=False), row=1, col=1)
-        fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#0068C9', width=3), name='Irreversibel'), row=1, col=1)
-        fig_joule.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
-        fig_joule.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
-        fig_joule.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#0068C9', width=3), showlegend=False), row=1, col=1)
+        fig_joule.add_trace(go.Scatter(x=[s1, s2], y=[T1-273.15, T2-273.15], mode='lines', line=dict(color='#FF4B4B', width=3), name='Irreversibel'), row=1, col=1)
+        fig_joule.add_trace(go.Scatter(x=s_23, y=T_23-273.15, mode='lines', line=dict(color='#FF4B4B', width=3), showlegend=False), row=1, col=1)
+        fig_joule.add_trace(go.Scatter(x=[s3, s4], y=[T3-273.15, T4-273.15], mode='lines', line=dict(color='#FF4B4B', width=3), showlegend=False), row=1, col=1)
+        fig_joule.add_trace(go.Scatter(x=s_41, y=T_41-273.15, mode='lines', line=dict(color='#FF4B4B', width=3), showlegend=False), row=1, col=1)
         fig_joule.add_trace(go.Scatter(
             x=[s1, s2s, s2, s3, s4s, s4], y=[T1-273.15, T2s-273.15, T2-273.15, T3-273.15, T4s-273.15, T4-273.15],
-            mode='markers+text', marker=dict(size=10, color='white', line=dict(width=2, color=['#0068C9', '#888888', '#0068C9', '#0068C9', '#888888', '#0068C9'])),
+            mode='markers+text', marker=dict(size=10, color='white', line=dict(width=2, color=['#FF4B4B', '#888888', '#FF4B4B', '#FF4B4B', '#888888', '#FF4B4B'])),
             text=["1", "2<sub>s</sub>", "2", "3", "4<sub>s</sub>", "4"], textposition=["bottom right", "top left", "bottom right", "top center", "bottom left", "bottom right"], showlegend=False
         ), row=1, col=1)
         
         fig_joule.add_trace(go.Table(
-            header=dict(values=["<b>Punkt</b>", "<b>Druck <i>p</i> (bar)</b>", "<b>Temp. <i>T</i> (°C)</b>", "<b>Entropie <i>s</i> (kJ/(kg K))</b>"], font=dict(size=14, color='white'), align="left", fill_color='#0068C9', line=dict(color='#E0E0E0', width=1)),
+            header=dict(values=["<b>Punkt</b>", "<b>Druck <i>p</i> (bar)</b>", "<b>Temp. <i>T</i> (°C)</b>", "<b>Entropie <i>s</i> (kJ/(kg K))</b>"], font=dict(size=14, color='white'), align="left", fill_color='#FF4B4B', line=dict(color='#E0E0E0', width=1)),
             cells=dict(
                 values=[
                     ["1 (Ansaugung)", "2<sub>s</sub> (Ideal/Isentrop)", "2 (Irreversibel)", "3 (Turbineneintritt)", "4<sub>s</sub> (Ideal/Isentrop)", "4 (Irreversibel)"],
@@ -1310,10 +1312,15 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
                 x=[Q_kum_0, Q_kum_1, Q_kum_2, Q_kum_3], y=[T_d_1, T_sat_C, T_sat_C, T_speisewasser],
                 mode='lines+markers', line=dict(color='#0068C9', width=3), name='Dampfprozess (Wärmesenke)'
             ))
+            
             fig_tq.add_trace(go.Scatter(
                 x=[Q_kum_0, Q_kum_1, Q_kum_2, Q_kum_3], y=[T_g_0, T_g_1, T_g_2, T_g_3],
-                mode='lines+markers', line=dict(color='#FF4B4B', width=3), name='Abgas (Wärmequelle)',
-                fill='tonexty', fillcolor='rgba(255, 75, 75, 0.15)'
+                mode='none', fill='tonexty', fillcolor='rgba(255, 75, 75, 0.15)', showlegend=False, hoverinfo='skip'
+            ))
+
+            fig_tq.add_trace(go.Scatter(
+                x=[Q_kum_0, Q_kum_1, Q_kum_2, Q_kum_3], y=[T_g_0, T_g_1, T_g_2, T_g_3],
+                mode='lines+markers', line=dict(color='#FF4B4B', width=3), name='Abgas (Wärmequelle)'
             ))
 
             fig_tq.add_annotation(
@@ -1348,7 +1355,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
                 e3.metric("Einsparpotenzial", f"{E_v_real - E_v_min:.1f} kW", help="Exergie, die durch Reduzierung des Pinch-Points noch in nutzbare Arbeit gewandelt werden könnte.")
             
         with tab_ts_gas:
-            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die blaue Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
+            st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die rote Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
             st.plotly_chart(fig_joule, use_container_width=True, theme="streamlit")
             
         with tab_ts_dampf:
