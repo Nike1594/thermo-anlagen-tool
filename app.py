@@ -1335,7 +1335,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             if E_v_real > 0:
                 e1, e2, e3 = st.columns(3)
                 e1.metric("Gesamter Exergieverlust $\dot{E}_V$", f"{E_v_real:.1f} kW", help="Summe der Verluste im AHDE (Wärmeübertragung) und durch das heiße Abgas im Kamin.")
-                e2.metric(r"Theoret. Minimum ($\Delta T_{PP} = 0$)", f"{E_v_min:.1f} kW", help="Geringstmöglicher Gesamtverlust bei einem unendlich großen Wärmetauscher.")
+                e2.metric(r"Theoret. Minimum ($\Delta T_{PP} = 0$)", f"{E_v_min:.1f} kW", help="Geringstmöglicher Gesamtverlust bei einem unendlich großen Wärmeübertrager.")
                 e3.metric("Einsparpotenzial", f"{E_v_real - E_v_min:.1f} kW", help="Exergie, die durch Reduzierung des Pinch-Points noch in nutzbare Arbeit gewandelt werden könnte.")
             
         with tab_ts_gas:
