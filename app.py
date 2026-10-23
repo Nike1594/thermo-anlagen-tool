@@ -47,29 +47,25 @@ def apply_theme_to_svg(svg_str, *args, **kwargs):
 theme_type = "auto"
 
 def ensure_default(key, value):
-    """Initialisiert Slider/Number-Input-Paar im Session State, falls noch nicht vorhanden."""
     if f"{key}_slider" not in st.session_state:
         st.session_state[f"{key}_slider"] = value
         st.session_state[f"{key}_input"] = value
 
 
 initial_values = {
-    # Clausius-Rankine-Prozess
-    "cr_p1": 0.05,       # Kondensatordruck (bar)
-    "cr_T1": 30.0,       # Kondensationstemperatur (°C)
-    "cr_p2": 100.0,      # Kesseldruck (bar)
-    "cr_T3": 450.0,      # Frischdampftemperatur (°C)
-    "cr_m_dot": 10.0,    # Massenstrom (kg/s)
-    "cr_eta_s_P": 80.0,  # Isentroper Wirkungsgrad Pumpe (%)
-    "cr_eta_s_T": 85.0,  # Isentroper Wirkungsgrad Turbine (%)
-    # Joule-Prozess
+    "cr_p1": 0.05,       
+    "cr_T1": 30.0,       
+    "cr_p2": 100.0,      
+    "cr_T3": 450.0,      
+    "cr_m_dot": 10.0,    
+    "cr_eta_s_P": 80.0,  
+    "cr_eta_s_T": 85.0,  
     "j_T1": 21.0,
     "j_p1": 1.03,
     "j_T3": 1010.0,
     "j_pi": 6.9,
     "j_m_dot": 1.12,
-    # GuD
-    "gud_T1": 30.0,      # Kondensationstemp für GuD
+    "gud_T1": 30.0,      
 }
 
 for key, val in initial_values.items():
@@ -116,7 +112,6 @@ def get_filtered_fluids():
 
 @st.cache_data
 def get_orc_fluids():
-    """Definiert typische Fluide für Dampfkraftwerke und ORC-Prozesse."""
     orc_fluids = {
         "Wasser (Standard)": "Water",
         "Ammoniak": "Ammonia",
@@ -192,7 +187,7 @@ def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_
     T_kond_arr = np.linspace(25.0, 75.0, 60)
 
     cop_heiz_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
-    eer_kalt_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
+     eer_kalt_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
     n_failed = 0
 
     for i, T_k in enumerate(T_kond_arr):
@@ -337,7 +332,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     else:
         create_synced_input(
             "Kondensatordruck $p_{kond}$ (bar)", "cr_p1", bounds["p1"][0], bounds["p1"][1], bounds["p1"][0]*2,
-            help_text="Bestimmt das untere Temperaturniveau des Prozesses."
+            help_text="Bestimmt das untere Temperaturniveau des Prozesse."
         )
         p_kond = st.session_state.cr_p1_input
 
@@ -1324,6 +1319,20 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             fig_tq.add_annotation(
                 x=Q_kum_2, y=T_sat_C, text=f"Pinch Point ({pinch} K)",
                 showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#333", ax=0, ay=40, font=dict(size=12)
+            )
+
+            fig_tq.add_annotation(
+                x=Q_kum_3 * 0.4 + Q_kum_2 * 0.6, y=T_speisewasser * 0.4 + T_sat_C * 0.6,
+                ax=Q_kum_3 * 0.6 + Q_kum_2 * 0.4, ay=T_speisewasser * 0.6 + T_sat_C * 0.4,
+                xref='x', yref='y', axref='x', ayref='y',
+                showarrow=True, arrowhead=3, arrowsize=1.5, arrowwidth=2.5, arrowcolor='#0068C9'
+            )
+
+            fig_tq.add_annotation(
+                x=Q_kum_1 * 0.4 + Q_kum_2 * 0.6, y=T_g_1 * 0.4 + T_g_2 * 0.6,
+                ax=Q_kum_1 * 0.6 + Q_kum_2 * 0.4, ay=T_g_1 * 0.6 + T_g_2 * 0.4,
+                xref='x', yref='y', axref='x', ayref='y',
+                showarrow=True, arrowhead=3, arrowsize=1.5, arrowwidth=2.5, arrowcolor='#FF4B4B'
             )
 
             fig_tq.update_layout(
