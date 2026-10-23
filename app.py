@@ -187,7 +187,7 @@ def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_
     T_kond_arr = np.linspace(25.0, 75.0, 60)
 
     cop_heiz_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
-     eer_kalt_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
+    eer_kalt_grid = np.full((len(T_kond_arr), len(T_verd_arr)), np.nan)
     n_failed = 0
 
     for i, T_k in enumerate(T_kond_arr):
