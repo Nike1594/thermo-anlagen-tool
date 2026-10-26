@@ -8,6 +8,12 @@ import re
 from backend_rankine import ClausiusRankineProzess
 from backend_kaelte import KaelteKreisprozess
 
+class EingabeFehler(Exception):
+    def __init__(self, fehler, loesung):
+        super().__init__(fehler)
+        self.fehler = fehler
+        self.loesung = loesung
+        
 st.set_page_config(page_title="Thermische Anlagen", layout="wide")
 
 st.markdown("""
@@ -355,17 +361,24 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     )
     
     if opt_p_kessel:
+    try:
+        p_crit_bar_cr = CP.PropsSI('PCRIT', cr_fluid) / 100000.0
+    except Exception:
+        p_crit_bar_cr = None
+    ueberkritisch = p_crit_bar_cr is not None and p_verd >= p_crit_bar_cr
+
+    T_sat_kessel_C = None
+    if not ueberkritisch:
         try:
-            p_opt_pa = CP.PropsSI('P', 'T', T_max + 273.15, 'Q', 1, cr_fluid)
-            p_verd = p_opt_pa / 100000
-            st.sidebar.success(f"Automatischer Kesseldruck: **{p_verd:.2f} bar**")
-        except ValueError:
-            st.sidebar.warning(f"{T_max} °C ist überkritisch für {selected_orc_display}. Manueller Druck erforderlich.")
-            p_verd = p_verd_manuell
-    else:
-        p_verd = p_verd_manuell
+            T_sat_kessel_C = CP.PropsSI('T', 'P', p_verd * 100000, 'Q', 1, cr_fluid) - 273.15
+        except Exception:
+            T_sat_kessel_C = None
+    T_zu_niedrig = T_sat_kessel_C is not None and T_max < T_sat_kessel_C - 0.01
+
+    zue_moeglich = (float(p_verd) - 1.0) > (float(p_kond) + 0.1)
+    zue_fehler = has_zue and not zue_moeglich
     
-    if has_zue:
+    if has_zue and zue_moeglich:
         st.sidebar.markdown("**Zwischenüberhitzung**")
         
         p_zue_min = float(p_kond) + 0.1
@@ -433,7 +446,16 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     
     if p_kond >= p_verd:
         st.error("**Thermodynamischer Widerspruch:** Der Kondensatordruck ($p_{kond}$) darf nicht höher oder gleich dem Kesseldruck ($p_{kessel}$) sein.")
-        st.info("Bitte korrigiere die Druckniveaus in der Seitenleiste. Die Kreispumpe kann nicht von einem hohen auf einen niedrigen Druck fördern.")
+        st.info("Bitte korrigiere die Druckniveaus in der Seitenleiste. Die Pumpe kann nicht von einem hohen auf einen niedrigen Druck fördern.")
+    elif zue_fehler:
+        st.error("**Fehler in der Zwischenüberhitzung (ZÜ):** Zwischen Kondensator- und Kesseldruck ist kein Platz für einen gültigen Zwischendruck.")
+        st.info("Der Zwischendruck muss strikt zwischen den Druckniveaus liegen: $p_{kond} + 0{,}1\\,\\mathrm{bar} < p_{ZÜ} < p_{kessel} - 1\\,\\mathrm{bar}$. Kesseldruck erhöhen, Kondensatordruck senken oder die ZÜ deaktivieren.")
+    elif ueberkritisch:
+        st.error(f"**Überkritischer Kesseldruck:** Der gewählte Kesseldruck von **{p_verd:.1f} bar** liegt über dem kritischen Druck von **{selected_orc_display}** (**{p_crit_bar_cr:.1f} bar**).")
+        st.info("Bitte den Kesseldruck unter den kritischen Druck des Arbeitsfluids senken.")
+    elif T_zu_niedrig:
+        st.error(f"**Kein Dampf am Turbineneintritt:** Die Frischdampftemperatur von **{T_max:.0f} °C** liegt unter der Siedetemperatur von **{T_sat_kessel_C:.1f} °C** bei {p_verd:.1f} bar.")
+        st.info("Die Frischdampftemperatur $T_{max}$ über die Siedetemperatur anheben oder den Kesseldruck senken.")
     else:
         try:
             cr_prozess = ClausiusRankineProzess(
@@ -486,7 +508,23 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                 r"Pumpe $P_P$", f"{P_tP_real:.0f} kW",
                 help=r"**Pumpenleistung (Eigenbedarf)**" + "\n\n" + r"$P_P = \dot{m} \cdot w_P > 0$" + "\n\n" + "Leistungsbedarf zur Förderung des Fluids auf Kesseldruck.\n\nDas Vorzeichen ist positiv, da der Pumpe Leistung zugeführt werden muss."
             )
-            
+            try:
+                if has_zue:
+                    austritte = {"HD-Turbinenaustritt (Punkt 2)": '2', "ND-Turbinenaustritt (Punkt 4)": '4'}
+                else:
+                    austritte = {"Turbinenaustritt (Punkt 2)": '2'}
+                for bezeichnung, key in austritte.items():
+                    z_aus = cr_prozess.zustand[key]
+                    hf_aus = CP.PropsSI('H', 'P', z_aus['p'], 'Q', 0, cr_fluid)
+                    hg_aus = CP.PropsSI('H', 'P', z_aus['p'], 'Q', 1, cr_fluid)
+                    x_aus = (z_aus['h'] - hf_aus) / (hg_aus - hf_aus)
+                    if 0.0 <= x_aus < 0.88:
+                        st.warning(
+                            f"**Tropfenschlaggefahr:** Der Dampfgehalt am {bezeichnung} beträgt nur x = {x_aus:.3f} (< 0,88). "
+                            "Abhilfe: Zwischenüberhitzung nutzen, Frischdampftemperatur erhöhen oder Kesseldruck senken."
+                        )
+            except Exception:
+                pass            
             st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die rote Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
 
             fig = make_subplots(
@@ -1037,14 +1075,22 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
 
     # Berechnung Dampf
     gud_error = False
-    if w_net_real := w_tT_real - w_tV_real < 0:
+    w_net_real = w_tT_real - w_tV_real
+    if w_net_real < 0:
         st.error("Achtung: Der Gas-Verdichter verbraucht mehr Leistung als die Gasturbine liefert. Die Anlage ist nicht lauffähig!")
         gud_error = True
         
     if has_gud_zue and p_zue >= p_kessel:
         st.error(f"**Fehler in der ZÜ:** Der Zwischendruck ({p_zue:.1f} bar) muss zwingend unter dem Kesseldruck ({p_kessel:.1f} bar) liegen!")
         gud_error = True
+    if p_kond >= p_kessel:
+        st.error(f"**Thermodynamischer Widerspruch:** Der Kondensatordruck ({p_kond:.2f} bar) darf nicht höher oder gleich dem Kesseldruck ({p_kessel:.1f} bar) sein.")
+        gud_error = True
 
+    if has_gud_zue and p_zue <= p_kond:
+        st.error(f"**Fehler in der ZÜ:** Der Zwischendruck ({p_zue:.1f} bar) muss größer als der Kondensatordruck ({p_kond:.2f} bar) sein.")
+        gud_error = True
+        
     T_max_dampf = (T4 - 273.15) - pinch
     T_zue_dampf = T_max_dampf if has_gud_zue else None 
     
@@ -1525,6 +1571,20 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
         eta_is_hd = eta_is_nd 
     
     try:
+        T_krit_C = CP.PropsSI('Tcrit', fluid) - 273.15
+        p_krit_bar = CP.PropsSI('pcrit', fluid) / 100000
+        if eingabe_modus_c == "Temperatur (°C)":
+            if st.session_state.k_tc_input >= T_krit_C:
+                raise EingabeFehler(
+                    f"Kondensationstemperatur ({st.session_state.k_tc_input:.1f} °C) liegt oberhalb der kritischen Temperatur von {selected_display} ({T_krit_C:.1f} °C).",
+                    "Kondensationstemperatur unter die kritische Temperatur senken oder ein anderes Kältemittel wählen. Transkritischer Betrieb wird nicht abgebildet."
+                )
+        else:
+            if st.session_state.k_pc_input >= p_krit_bar:
+                raise EingabeFehler(
+                    f"Kondensationsdruck ({st.session_state.k_pc_input:.1f} bar) liegt oberhalb des kritischen Drucks von {selected_display} ({p_krit_bar:.1f} bar).",
+                    "Kondensationsdruck unter den kritischen Druck senken oder ein anderes Kältemittel wählen. Transkritischer Betrieb wird nicht abgebildet."
+                )
         if eingabe_modus_0 == "Druck (bar)":
             p_0_bar = st.session_state.k_p0_input
             T_0_C = CP.PropsSI('T', 'P', p_0_bar * 100000, 'Q', 1, fluid) - 273.15
@@ -1551,7 +1611,19 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                     T_m_C = st.session_state.k_tm_input
         else:
             T_m_C = None
+            
+        if T_0_C >= T_c_C:
+            raise EingabeFehler(
+                f"Verdampfungstemperatur T₀ ({T_0_C:.1f} °C) ist nicht kleiner als die Kondensationstemperatur T_c ({T_c_C:.1f} °C).",
+                "T₀ muss strikt kleiner als T_c sein, sonst gibt es keine sinnvolle Verdichterarbeit und Leistungszahl."
+            )
 
+        if is_2stage and not (T_0_C < T_m_C < T_c_C):
+            raise EingabeFehler(
+                f"Zwischenstufe (T_m = {T_m_C:.1f} °C) liegt außerhalb des Bereichs zwischen Verdampfung ({T_0_C:.1f} °C) und Kondensation ({T_c_C:.1f} °C).",
+                "Zwischentemperatur bzw. Zwischendruck so wählen, dass p₀ < p_m < p_c gilt, oder die Option „Optimalen Mitteldruck berechnen“ aktivieren."
+            )
+            
         dT_sh = 0.0
         if has_sh:
             if sh_mode == "um (ΔT)":
@@ -1576,6 +1648,22 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
         
         if is_2stage:
             if has_zk and T_zk_input is not None:
+            T_heissgas_max_C = max(kaelte_prozess.zustand['2']['T'], kaelte_prozess.zustand['4']['T']) - 273.15
+        else:
+            T_heissgas_max_C = kaelte_prozess.zustand['2']['T'] - 273.15
+        if T_heissgas_max_C > 120.0:
+            st.warning(
+                f"**Heißgastemperatur zu hoch:** Die maximale Heißgastemperatur beträgt {T_heissgas_max_C:.1f} °C (> 120 °C, Gefahr der Ölzersetzung). "
+                "Abhilfe: zweistufig mit Zwischenkühlung verdichten, Überhitzung bzw. Druckverhältnis reduzieren oder den Verdichterwirkungsgrad verbessern."
+            )
+
+        if is_2stage and has_zk and T_zk_input is not None:
+            T_nd_heissgas_C = kaelte_prozess.zustand['2']['T'] - 273.15
+            if T_zk_input >= T_nd_heissgas_C:
+                st.warning(
+                    f"**Zwischenkühlung wirkungslos:** Die eingestellte Temperatur nach der ZK ({T_zk_input:.1f} °C) liegt nicht unter der Heißgastemperatur nach dem ND-Verdichter ({T_nd_heissgas_C:.1f} °C). "
+                    "Die Temperatur wird begrenzt, es findet keine Kühlung statt. $T_{2zk}$ niedriger wählen (aber oberhalb der Sättigungstemperatur bei Mitteldruck)."
+                )
                 T_sat_m = CP.PropsSI('T', 'P', kaelte_prozess.p_m, 'Q', 1, fluid) - 273.15
                 if T_zk_input < T_sat_m:
                     st.warning(f"Die eingestellte ZK-Temperatur ({T_zk_input} °C) liegt unter der Sättigungstemperatur ({T_sat_m:.2f} °C) bei Mitteldruck. Das Gas würde kondensieren. Die Temperatur wird auf den Taupunkt begrenzt.")
@@ -1877,6 +1965,10 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
             table_height = max(400, 150 + len(daten_tabelle['labels']) * 35)
             fig_tab.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=table_height)
             st.plotly_chart(fig_tab, use_container_width=True, theme="streamlit")
+
+    except EingabeFehler as e:
+        st.error(f"**{e.fehler}**")
+        st.info(e.loesung)
             
     except Exception as e:
         st.error(f"Berechnungsfehler: {e}")
