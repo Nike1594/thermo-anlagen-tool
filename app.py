@@ -530,7 +530,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                     if 0.0 <= x_aus < 0.88:
                         st.warning(
                             f"**Tropfenschlaggefahr:** Der Dampfgehalt am {bezeichnung} beträgt nur x = {x_aus:.3f} (< 0,88). "
-                            "Abhilfe: Zwischenüberhitzung nutzen, Frischdampftemperatur erhöhen oder Kesseldruck senken."
+                            "Abhilfe: Zwischenüberhitzung nutzen, Frischdampftemperatur erhöhen, Kesseldruck senken oder Kondensatordruck erhöhen (senkt aber den Wirkungsgrad)."
                         )
             except Exception:
                 pass
@@ -663,7 +663,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             if has_zue:
                 st.divider()
                 st.subheader("Parameterstudie: Einfluss der Zwischenüberhitzung")
-                st.write("Untersuche den thermischen Wirkungsgrad $\eta_{th}$ in Abhängigkeit von Zwischendruck und Zwischentemperatur. Die rot gestrichelten Linien markieren die technisch extrem wichtigen Grenzen für den Dampfgehalt am ND-Turbinenaustritt (z.B. $x = 0,88$ und $x = 0,95$) zum Schutz vor Tropfenschlag.")
+                st.write("Untersuche den thermischen Wirkungsgrad $\eta_{th}$ in Abhängigkeit von Zwischendruck und Zwischentemperatur. Die rot gestrichelten Linien markieren die technisch wichtigen Grenzen für den Dampfgehalt am ND-Turbinenaustritt (z.B. $x = 0,88$ und $x = 0,95$) zum Schutz vor Tropfenschlag.")
                 
                 if st.button("Parameterfeld berechnen (Contour-Plot erstellen)"):
                     with st.spinner("Rechne Matrix durch (Echtzeit-Berechnung) ..."):
@@ -737,7 +737,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
 
 elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     st.title("Joule-Prozess (Gasturbine)")
-    st.write("Thermodynamische Auslegung einer offenen oder geschlossenen Gasturbine.")
+    st.write("Thermodynamische Auslegung einer Gasturbine.")
     
     st.sidebar.header("Anlagenkonfiguration")
     fluid_name = st.sidebar.selectbox(
