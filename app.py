@@ -13,7 +13,7 @@ class EingabeFehler(Exception):
         super().__init__(fehler)
         self.fehler = fehler
         self.loesung = loesung
-        
+
 st.set_page_config(page_title="Thermische Anlagen", layout="wide")
 
 st.markdown("""
@@ -253,7 +253,6 @@ def berechne_effizienzfelder(fluid, is_2stage, has_mdf, mdf_mode_key, has_zk, T_
 
     return cop_heiz_grid, eer_kalt_grid, T_verd_arr, T_kond_arr, n_failed
 
-# Sidebar
 
 st.sidebar.title("Thermische Anlagen")
 prozess_auswahl = st.sidebar.radio(
@@ -279,7 +278,6 @@ def get_orc_bounds(fluid_display):
         return {"p1": (0.02, 10.0, 0.5), "p2": (2.0, 100.0, 20.0), "T3": (80.0, 400.0, 250.0)}
 
 
-# 1. CLAUSIUS-RANKINE-PROZESS
 if prozess_auswahl == "Clausius-Rankine-Prozess":
     st.title("Clausius-Rankine-Prozess (bzw. ORC)")
     st.write("Vergleich: Idealer (reversibler) vs. Realer (irreversibler) Kreisprozess.")
@@ -361,6 +359,16 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
     )
     
     if opt_p_kessel:
+        try:
+            p_opt_pa = CP.PropsSI('P', 'T', T_max + 273.15, 'Q', 1, cr_fluid)
+            p_verd = p_opt_pa / 100000
+            st.sidebar.success(f"Automatischer Kesseldruck: **{p_verd:.2f} bar**")
+        except ValueError:
+            st.sidebar.warning(f"{T_max} °C ist überkritisch für {selected_orc_display}. Manueller Druck erforderlich.")
+            p_verd = p_verd_manuell
+    else:
+        p_verd = p_verd_manuell
+
     try:
         p_crit_bar_cr = CP.PropsSI('PCRIT', cr_fluid) / 100000.0
     except Exception:
@@ -508,6 +516,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                 r"Pumpe $P_P$", f"{P_tP_real:.0f} kW",
                 help=r"**Pumpenleistung (Eigenbedarf)**" + "\n\n" + r"$P_P = \dot{m} \cdot w_P > 0$" + "\n\n" + "Leistungsbedarf zur Förderung des Fluids auf Kesseldruck.\n\nDas Vorzeichen ist positiv, da der Pumpe Leistung zugeführt werden muss."
             )
+
             try:
                 if has_zue:
                     austritte = {"HD-Turbinenaustritt (Punkt 2)": '2', "ND-Turbinenaustritt (Punkt 4)": '4'}
@@ -524,7 +533,8 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                             "Abhilfe: Zwischenüberhitzung nutzen, Frischdampftemperatur erhöhen oder Kesseldruck senken."
                         )
             except Exception:
-                pass            
+                pass
+
             st.info("**Vergleich Ideal vs. Irreversibel:** Die grau gestrichelte Linie im T-s-Diagramm zeigt den idealisierten (reversiblen) Vergleichsprozess ohne Verluste (senkrechte, isentrope Zustandsänderungen). Die rote Linie zeigt den irreversiblen Prozessverlauf. Aufgrund innerer Reibung nimmt die Entropie bei Verdichtung und Entspannung zu – die Linien kippen nach rechts.")
 
             fig = make_subplots(
@@ -533,7 +543,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                 specs=[[{"type": "scatter"}], [{"type": "table"}]], row_heights=[0.65, 0.35]
             )
 
-            # SVG Schema
             if not has_zue:
                 try:
                     T1 = cr_prozess.zustand['1']['T'] - 273.15
@@ -651,7 +660,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
-            # Parameterstudie
             if has_zue:
                 st.divider()
                 st.subheader("Parameterstudie: Einfluss der Zwischenüberhitzung")
@@ -680,7 +688,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
 
                         fig_contour = go.Figure()
                         
-                        # Basis-Wirkungsgrad Plot
                         fig_contour.add_trace(go.Contour(
                             z=eta_grid, x=p_zue_arr, y=T_zue_arr,
                             colorscale="Viridis",
@@ -689,7 +696,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                             hovertemplate="p_ZÜ: %{x:.1f} bar<br>T_ZÜ: %{y:.1f} °C<br>η<sub>th</sub>: %{z:.2f} %<extra></extra>"
                         ))
                         
-                        # Limit-Linien für Dampfnässe (88% und 95%)
                         fig_contour.add_trace(go.Contour(
                             z=x_grid, x=p_zue_arr, y=T_zue_arr,
                             type='contour',
@@ -703,7 +709,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                             hoverinfo='skip'
                         ))
                         
-                        # Taulinie x=1.0
                         fig_contour.add_trace(go.Contour(
                             z=x_grid, x=p_zue_arr, y=T_zue_arr,
                             type='contour',
@@ -730,7 +735,6 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
             with st.expander("Technisches Fehlerdetail (CoolProp)"):
                 st.code(e)
 
-# 2 Joule-Prozess
 elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     st.title("Joule-Prozess (Gasturbine)")
     st.write("Thermodynamische Auslegung einer offenen oder geschlossenen Gasturbine.")
@@ -880,7 +884,6 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
             help="**Verdichterleistung (Eigenbedarf)**\n\nDer Leistungsbedarf des Luft-Kompressors.\n\nPositiv nach IUPAC-Konvention, da dem System Arbeit zugeführt wird."
         )
 
-    # Anlagenschemata
     try:
         with open("Joule-Prozess.svg", "r", encoding="utf-8") as file:
             svg_code = file.read()
@@ -900,7 +903,6 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     except FileNotFoundError:
         st.warning("Das Bild 'Joule-Prozess.svg' fehlt noch im Ordner.")
 
-    # Diagramme
     def calc_s(T, p):
         return (cp * np.log(T / T1) - R_i * np.log(p / p1)) / 1000
         
@@ -956,12 +958,10 @@ elif prozess_auswahl == "Joule-Prozess (Gasturbine)":
     fig_joule.update_layout(xaxis_title="Spezifische Entropie <i>s</i> in kJ/(kg K)", yaxis_title="Temperatur <i>T</i> in °C", height=1000, hovermode="closest", margin=dict(l=40, r=40, t=40, b=40))
     st.plotly_chart(fig_joule, use_container_width=True, theme="streamlit")
 
-# 3. GuD
 elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     st.title("Gas-und-Dampf-Kombikraftwerk (GuD)")
     st.write("Thermodynamische Kopplung eines Joule-Prozesses (Gasturbine) mit einem Clausius-Rankine-Prozess (Dampfkraft) zur Abwärmenutzung.")
     
-    # Eingaben
     st.sidebar.header("1. Gasturbine (Heißteil)")
     fluid_name = st.sidebar.selectbox(
         "Arbeitsfluid (Gasturbine)", ["Luft (zweiatomig)", "Helium (einatomig)", "Argon (einatomig)", "R744 (CO2)"]
@@ -1055,7 +1055,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     else:
         p_zue = None
 
-    # Berechnung Gasturbine
     p2 = p1 * pi; p3 = p2; p4 = p1
     T2s = T1 * (pi ** ((kappa - 1) / kappa))
     T4s = T3 / (pi ** ((kappa - 1) / kappa))
@@ -1073,7 +1072,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     P_tT_real = m_dot_gas * w_tT_real 
     Q_zu_Brennkammer = m_dot_gas * (cp * (T3 - T2) / 1000)
 
-    # Berechnung Dampf
     gud_error = False
     w_net_real = w_tT_real - w_tV_real
     if w_net_real < 0:
@@ -1083,6 +1081,7 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
     if has_gud_zue and p_zue >= p_kessel:
         st.error(f"**Fehler in der ZÜ:** Der Zwischendruck ({p_zue:.1f} bar) muss zwingend unter dem Kesseldruck ({p_kessel:.1f} bar) liegen!")
         gud_error = True
+
     if p_kond >= p_kessel:
         st.error(f"**Thermodynamischer Widerspruch:** Der Kondensatordruck ({p_kond:.2f} bar) darf nicht höher oder gleich dem Kesseldruck ({p_kessel:.1f} bar) sein.")
         gud_error = True
@@ -1156,7 +1155,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             st.error("Fehler in der Dampf-Berechnung. Möglicherweise Kesseldruck zu hoch für dieses Fluid.")
             gud_error = True
 
-    # Ergebnisse
     if not gud_error:
         fluid_title = "Luft (variabel)" if var_cp_mode else fluid_name.split()[0]
         st.subheader(f"Berechnete Anlagenleistung für GuD mit {fluid_title} und {selected_gud_fluid_display}")
@@ -1175,7 +1173,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
         c7.metric("Dampfturbine $P_{T,D}$", f"{-gud_dampf.leistung_turbine:.0f} kW", help="Von der Dampfturbine generierte Bruttoleistung (negativ, da Energieabgabe an die Umgebung).")
         c8.metric("Speisewasserpumpe $P_{P,D}$", f"{gud_dampf.leistung_pumpe:.0f} kW", help="Eigenbedarf der Wasserpumpe zur Druckerhöhung (positiv, da Energiezufuhr in das System).")
 
-        # Anlagenschema
         try:
             if has_gud_zue:
                 with open("GuD-Prozess_ZUE.svg", "r", encoding="utf-8") as file:
@@ -1239,7 +1236,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
         except FileNotFoundError:
             st.warning("Das Bild (SVG) für diesen Prozess fehlt noch im Ordner.")
 
-        # Diagramme
         def calc_s(T, p):
             return (cp * np.log(T / T1) - R_i * np.log(p / p1)) / 1000
             
@@ -1312,9 +1308,8 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             Q_kum_2 = Q_kum_1 + Q_dot_vd
             Q_kum_3 = Q_kum_2 + Q_dot_eco
             
-            # Exergie
             try:
-                T_u = 293.15 # Umgebungstemperatur 20 °C
+                T_u = 293.15
                 s_d_1 = gud_dampf.zustand['1']['s'] / 1000
                 if has_gud_zue:
                     s_speise = gud_dampf.zustand['6']['s'] / 1000
@@ -1433,7 +1428,6 @@ elif prozess_auswahl == "Gas-und-Dampf-Kombikraftwerk (GuD)":
             st.plotly_chart(fig_dampf, use_container_width=True, theme="streamlit")
 
 
-# 4. KÄLTEANLAGEN
 elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
     st.title("Kompressionskälteanlage")
     st.write("Thermodynamische Auslegung und Analyse von Kältekreisläufen.")
@@ -1585,6 +1579,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                     f"Kondensationsdruck ({st.session_state.k_pc_input:.1f} bar) liegt oberhalb des kritischen Drucks von {selected_display} ({p_krit_bar:.1f} bar).",
                     "Kondensationsdruck unter den kritischen Druck senken oder ein anderes Kältemittel wählen. Transkritischer Betrieb wird nicht abgebildet."
                 )
+
         if eingabe_modus_0 == "Druck (bar)":
             p_0_bar = st.session_state.k_p0_input
             T_0_C = CP.PropsSI('T', 'P', p_0_bar * 100000, 'Q', 1, fluid) - 273.15
@@ -1611,7 +1606,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                     T_m_C = st.session_state.k_tm_input
         else:
             T_m_C = None
-            
+
         if T_0_C >= T_c_C:
             raise EingabeFehler(
                 f"Verdampfungstemperatur T₀ ({T_0_C:.1f} °C) ist nicht kleiner als die Kondensationstemperatur T_c ({T_c_C:.1f} °C).",
@@ -1623,7 +1618,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                 f"Zwischenstufe (T_m = {T_m_C:.1f} °C) liegt außerhalb des Bereichs zwischen Verdampfung ({T_0_C:.1f} °C) und Kondensation ({T_c_C:.1f} °C).",
                 "Zwischentemperatur bzw. Zwischendruck so wählen, dass p₀ < p_m < p_c gilt, oder die Option „Optimalen Mitteldruck berechnen“ aktivieren."
             )
-            
+
         dT_sh = 0.0
         if has_sh:
             if sh_mode == "um (ΔT)":
@@ -1648,6 +1643,15 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
         
         if is_2stage:
             if has_zk and T_zk_input is not None:
+                T_sat_m = CP.PropsSI('T', 'P', kaelte_prozess.p_m, 'Q', 1, fluid) - 273.15
+                if T_zk_input < T_sat_m:
+                    st.warning(f"Die eingestellte ZK-Temperatur ({T_zk_input} °C) liegt unter der Sättigungstemperatur ({T_sat_m:.2f} °C) bei Mitteldruck. Das Gas würde kondensieren. Die Temperatur wird auf den Taupunkt begrenzt.")
+            
+            kaelte_prozess.berechne_zweistufig(has_mdf=has_mdf, mdf_mode=mdf_mode_key, has_zk=has_zk, T_2zk_C=T_zk_input)
+        else:
+            kaelte_prozess.berechne_einstufig()
+
+        if is_2stage:
             T_heissgas_max_C = max(kaelte_prozess.zustand['2']['T'], kaelte_prozess.zustand['4']['T']) - 273.15
         else:
             T_heissgas_max_C = kaelte_prozess.zustand['2']['T'] - 273.15
@@ -1664,15 +1668,7 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                     f"**Zwischenkühlung wirkungslos:** Die eingestellte Temperatur nach der ZK ({T_zk_input:.1f} °C) liegt nicht unter der Heißgastemperatur nach dem ND-Verdichter ({T_nd_heissgas_C:.1f} °C). "
                     "Die Temperatur wird begrenzt, es findet keine Kühlung statt. $T_{2zk}$ niedriger wählen (aber oberhalb der Sättigungstemperatur bei Mitteldruck)."
                 )
-                T_sat_m = CP.PropsSI('T', 'P', kaelte_prozess.p_m, 'Q', 1, fluid) - 273.15
-                if T_zk_input < T_sat_m:
-                    st.warning(f"Die eingestellte ZK-Temperatur ({T_zk_input} °C) liegt unter der Sättigungstemperatur ({T_sat_m:.2f} °C) bei Mitteldruck. Das Gas würde kondensieren. Die Temperatur wird auf den Taupunkt begrenzt.")
-            
-            kaelte_prozess.berechne_zweistufig(has_mdf=has_mdf, mdf_mode=mdf_mode_key, has_zk=has_zk, T_2zk_C=T_zk_input)
-        else:
-            kaelte_prozess.berechne_einstufig()
 
-        
         if is_2stage and opt_pm:
             st.info(f"**Optimaler Mitteldruck aktiv:** $p_m$ = {p_m_bar:.2f} bar (entspricht $T_m$ = {T_m_C:.1f} °C)")
 
@@ -1974,7 +1970,6 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
         st.error(f"Berechnungsfehler: {e}")
         st.info("Tipp: Wenn du über den Druck steuerst, stelle sicher, dass dieser innerhalb der Sättigungsgrenzen (zwischen Tripel- und kritischem Punkt) des gewählten Kältemittels liegt.")
 
-    # Parameterstudie Kälteanlagen/WP
     st.divider()
     bautyp_text = "zweistufigen" if is_2stage else "einstufigen"
     st.subheader(f"Parameterstudie: COP (Wärmepumpe) vs. EER (Kältemaschine)")
@@ -2000,7 +1995,6 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
             if n_failed:
                 st.caption(f"Hinweis: {n_failed} von {cop_heiz_grid.size} Gitterpunkten sind nicht konvergiert und wurden ausgeblendet.")
 
-            # Plot 1: Wärmepumpe
             fig_heiz = go.Figure(data=go.Contour(
                 z=cop_heiz_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Inferno", 
@@ -2018,7 +2012,6 @@ elif prozess_auswahl == "Kälteanlage (Kompressionskältemaschine)":
                 height=500, margin=dict(l=40, r=40, t=60, b=40)
             )
 
-            # Plot 2: Kältemaschine
             fig_kalt = go.Figure(data=go.Contour(
                 z=eer_kalt_grid, x=T_verd_arr, y=T_kond_arr,
                 colorscale="Viridis", 
