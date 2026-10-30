@@ -46,23 +46,21 @@ Bevor es losgeht, benötigst du zwei Standard-Programme auf deinem Rechner:
 * **Python:** Lade [Python hier herunter](https://www.python.org/downloads/) und starte die Installation. **WICHTIG:** Setze im allerersten Fenster ganz unten unbedingt den Haken bei **"Add python.exe to PATH"**, bevor du auf Installieren klickst!
 * **Git:** Dieses Hilfsprogramm lädt den Code herunter. Lade [Git für Windows hier herunter](https://git-scm.com/download/win). Starte die Installation und klicke einfach immer auf "Next".
 
-### 2. Eingabefenster öffnen
+### 2. Eingabefenster öffnen & Zielordner wählen
 * Drücke die Windows-Taste auf deiner Tastatur.
 * Tippe `powershell` ein und drücke Enter. Es öffnet sich ein Textfenster. 
+* Wechsle als Erstes auf deinen Desktop, damit du den Code-Ordner später leicht wiederfindest. Gib dafür diesen Befehl ein und drücke Enter:
+  ```bash
+  cd ~\Desktop
 
 ### 3. Programmcode herunterladen
-Kopiere den folgenden Befehl, füge ihn in das PowerShell-Fenster ein (meist per Rechtsklick) und drücke Enter:
+Kopiere den folgenden Befehl, füge ihn in das PowerShell-Fenster ein und drücke Enter:
 ```bash
-git clone [https://github.com/Nike1594/thermo-anlagen-tool.git](https://github.com/Nike1594/thermo-anlagen-tool.git)
-
-
-1. Repository klonen:
-
     git clone https://github.com/Nike1594/thermo-anlagen-tool.git
     cd thermo-anlagen-tool
-
-2. Virtuelle Umgebung erstellen und aktivieren:
-
+```
+### 4. Virtuelle Umgebung erstellen und aktivieren:
+```bash
     # Unter Windows:
     python -m venv venv
     venv\Scripts\activate
@@ -70,15 +68,15 @@ git clone [https://github.com/Nike1594/thermo-anlagen-tool.git](https://github.c
     # Unter Linux / macOS:
     python3 -m venv venv
     source venv/bin/activate
-
-3. Abhängigkeiten installieren:
-
+```
+### 5. Abhängigkeiten installieren:
+```bash
     pip install -r requirements.txt
-
-4. Programm starten:
-
+```
+### 6. Programm starten:
+```bash
     streamlit run app.py
-
+```
 ## Autor
 Nils Kellner
 
