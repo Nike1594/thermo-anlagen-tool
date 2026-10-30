@@ -4,7 +4,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![CoolProp](https://img.shields.io/badge/CoolProp-6.4+-red.svg)](http://www.coolprop.org/)
 
-Diese interaktive Web-Applikation ermöglicht die thermodynamische Auslegung, Simulation und Visualisierung von thermischen Kreisprozessen. Sie dient als digitales Werkzeug zur Untersuchung von realen und idealen Betriebsbedingungen in der Energietechnik.
+Diese interaktive Web-Applikation ermöglicht die thermodynamische Auslegung und Visualisierung von thermischen Kreisprozessen. Sie dient als digitales Werkzeug zur Untersuchung von realen und idealen Betriebsbedingungen in der Energietechnik.
 
 ## Live Demo
 Die Anwendung ist direkt im Browser nutzbar, ohne lokale Installation:
@@ -14,7 +14,7 @@ Die Anwendung ist direkt im Browser nutzbar, ohne lokale Installation:
 Dieses Tool entstand im Rahmen eines Masterprojekts im Studiengang **Gebäude- und Energietechnik** an der **HTWK Leipzig** (Betreuung: Prof. Dr.-Ing. Göpfert). Ziel war es, komplexe thermodynamische Berechnungen durch eine intuitive Benutzeroberfläche zugänglich zu machen und die Abhängigkeiten einzelner Anlagenparameter visuell erfahrbar zu machen.
 
 ## Kernfunktionen
-Das Tool umfasst aktuell drei Simulationsmodule:
+Das Tool umfasst aktuell vier Module:
 
 *   **Clausius-Rankine-Prozess (Dampfkraftwerk)**
     *   Vergleich von idealen (isentropen) und realen (irreversiblen) Prozessen.
@@ -41,16 +41,43 @@ Das Backend basiert auf physikalischen Massen- und Energiebilanzen unter Verwend
 ## Lokale Installation
 Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
 
+### 1. Voraussetzungen (Einmalig installieren)
+Bevor es losgeht, benötigst du zwei Standard-Programme auf deinem Rechner:
+* **Python:** Lade [Python hier herunter](https://www.python.org/downloads/) und starte die Installation. **WICHTIG:** Setze im allerersten Fenster ganz unten unbedingt den Haken bei **"Add python.exe to PATH"**, bevor du auf Installieren klickst!
+* **Git:** Dieses Hilfsprogramm lädt den Code herunter. Lade [Git für Windows hier herunter](https://git-scm.com/download/win). Starte die Installation und klicke einfach immer auf "Next", bis es fertig ist (die Standardeinstellungen sind perfekt).
+
+### 2. Eingabefenster öffnen
+* Drücke die Windows-Taste auf deiner Tastatur.
+* Tippe `powershell` ein und drücke Enter. Es öffnet sich ein Textfenster. 
+
+### 3. Programmcode herunterladen
+Kopiere den folgenden Befehl, füge ihn in das PowerShell-Fenster ein (meist per Rechtsklick) und drücke Enter:
+```bash
+git clone [https://github.com/Nike1594/thermo-anlagen-tool.git](https://github.com/Nike1594/thermo-anlagen-tool.git)
+
+
 1. Repository klonen:
-   ```bash
-   git clone https://github.com/Nike1594/thermo-anlagen-tool.git
-   cd thermo-anlagen-tool
-2. Abhängigkeiten installieren:
-   ```bash
-   pip install -r requirements.txt
-4. App starten:
-   ```bash
-   streamlit run app.py
+
+    git clone https://github.com/Nike1594/thermo-anlagen-tool.git
+    cd thermo-anlagen-tool
+
+2. Virtuelle Umgebung erstellen und aktivieren:
+
+    # Unter Windows:
+    python -m venv venv
+    venv\Scripts\activate
+
+    # Unter Linux / macOS:
+    python3 -m venv venv
+    source venv/bin/activate
+
+3. Abhängigkeiten installieren:
+
+    pip install -r requirements.txt
+
+4. Programm starten:
+
+    streamlit run app.py
 
 ## Autor
 Nils Kellner
