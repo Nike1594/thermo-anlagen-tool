@@ -44,7 +44,7 @@ Falls der Code lokal ausgeführt oder weiterentwickelt werden soll:
 ### 1. Voraussetzungen (Einmalig installieren)
 Bevor es losgeht, benötigst du zwei Standard-Programme auf deinem Rechner:
 * **Python:** Lade [Python hier herunter](https://www.python.org/downloads/) und starte die Installation. **WICHTIG:** Setze im allerersten Fenster ganz unten unbedingt den Haken bei **"Add python.exe to PATH"**, bevor du auf Installieren klickst!
-* **Git:** Dieses Hilfsprogramm lädt den Code herunter. Lade [Git für Windows hier herunter](https://git-scm.com/download/win). Starte die Installation und klicke einfach immer auf "Next", bis es fertig ist (die Standardeinstellungen sind perfekt).
+* **Git:** Dieses Hilfsprogramm lädt den Code herunter. Lade [Git für Windows hier herunter](https://git-scm.com/download/win). Starte die Installation und klicke einfach immer auf "Next".
 
 ### 2. Eingabefenster öffnen
 * Drücke die Windows-Taste auf deiner Tastatur.
