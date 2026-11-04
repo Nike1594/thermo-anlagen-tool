@@ -691,7 +691,10 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                         fig_contour.add_trace(go.Contour(
                             z=eta_grid, x=p_zue_arr, y=T_zue_arr,
                             colorscale="Viridis",
-                            colorbar=dict(title="η<sub>th</sub> (%)"),
+                            colorbar=dict(
+                                title=dict(text="η<sub>th</sub> (%)", font=dict(size=16)),
+                                tickfont=dict(size=14)
+                            ),
                             connectgaps=False, 
                             hovertemplate="p_ZÜ: %{x:.1f} bar<br>T_ZÜ: %{y:.1f} °C<br>η<sub>th</sub>: %{z:.2f} %<extra></extra>"
                         ))
@@ -703,7 +706,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                             contours=dict(
                                 start=0.88, end=0.95, size=0.07, 
                                 coloring='none', showlabels=True, 
-                                labelfont=dict(size=14, color='white')
+                                labelfont=dict(size=15, color='white')
                             ),
                             line=dict(color='red', width=2, dash='dash'),
                             hoverinfo='skip'
@@ -716,7 +719,7 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                             contours=dict(
                                 start=1.0, end=1.0, size=1.0, 
                                 coloring='none', showlabels=True, 
-                                labelfont=dict(size=14, color='white')
+                                labelfont=dict(size=15, color='white')
                             ),
                             line=dict(color='white', width=2, dash='dot'),
                             hoverinfo='skip',
@@ -724,8 +727,16 @@ if prozess_auswahl == "Clausius-Rankine-Prozess":
                         ))
 
                         fig_contour.update_layout(
-                            xaxis_title="Zwischendruck p<sub>ZÜ</sub> (bar)",
-                            yaxis_title="Zwischentemperatur T<sub>ZÜ</sub> (°C)",
+                            xaxis=dict(
+                                title="Zwischendruck p<sub>ZÜ</sub> (bar)",
+                                title_font=dict(size=18),
+                                tickfont=dict(size=15)
+                            ),
+                            yaxis=dict(
+                                title="Zwischentemperatur T<sub>ZÜ</sub> (°C)",
+                                title_font=dict(size=18),
+                                tickfont=dict(size=15)
+                            ),
                             height=550, margin=dict(l=40, r=40, t=40, b=40)
                         )
                         st.plotly_chart(fig_contour, use_container_width=True, theme="streamlit")
